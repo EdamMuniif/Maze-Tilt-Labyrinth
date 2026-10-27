@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fdfbff">
+  <meta name="description" content="A difficult top-down labyrinth you steer by tilting your phone.">
+  <title>Tilt Labyrinth — Nightmare Maze</title>
+  <style>
+    :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;overflow:hidden;background:#fffdfd;color:var(--ink);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    button:focus-visible{outline:3px solid #287bdb;outline-offset:3px}
+    #game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+    .topbar{position:fixed;z-index:3;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 15px) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none}
+    .brand,.stat,.tools{pointer-events:auto}
+    .brand{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.82);border:1px solid rgba(25,37,76,.08);border-radius:15px;padding:10px 13px;box-shadow:0 7px 26px #1b235017;backdrop-filter:blur(18px)}
+    .brandmark{width:22px;height:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;transform:rotate(-12deg)}
+    .brandmark i{background:linear-gradient(135deg,#2777c9,#b42c83);border-radius:1px}.brandmark i:nth-child(2),.brandmark i:nth-child(6){opacity:.25}
+    .brand strong{display:block;font-size:12px;font-weight:850;letter-spacing:.13em;line-height:1.15}
+    .brand small{display:block;font-size:9px;letter-spacing:.17em;font-weight:800;color:#a65092;margin-top:4px}
+    .hudright{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    .stat{border-radius:14px;padding:9px 13px;background:rgba(255,255,255,.86);border:1px solid rgba(25,37,76,.08);box-shadow:0 7px 26px #1b235012;backdrop-filter:blur(18px);min-width:77px}
+    .stat span{display:block;font-size:9px;color:var(--quiet);font-weight:750;letter-spacing:.13em}
+    .stat strong{display:block;font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+    .tools{display:flex;gap:5px;background:rgba(255,255,255,.86);border:1px solid rgba(25,37,76,.08);padding:5px;border-radius:14px;box-shadow:0 7px 26px #1b235012;backdrop-filter:blur(18px)}
+    .tool{min-width:42px;height:36px;border:0;background:transparent;border-radius:9px;font-size:10px;letter-spacing:.07em;font-weight:850;color:#4a5168}
+    .tool:hover{background:#e9e9f8}.tool:active{background:#d9d8f3}
+    .status{position:fixed;z-index:2;left:50%;bottom:calc(env(safe-area-inset-bottom) + 18px);transform:translateX(-50%);white-space:nowrap;pointer-events:none;color:#515779;background:rgba(255,255,255,.83);border:1px solid #e4e0ee;border-radius:99px;padding:10px 17px;text-transform:uppercase;font-size:9px;letter-spacing:.16em;font-weight:850;box-shadow:0 5px 24px #333b7610;backdrop-filter:blur(12px)}
+    .status .live{display:inline-block;background:#20a6a7;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:1px}
+    .status[data-level="waiting"] .live{background:#d69924}.status[data-level="error"] .live{background:#db4775}
+    .status{max-width:calc(100vw - 20px);overflow:hidden;text-overflow:ellipsis}
+    .shade{position:fixed;z-index:5;inset:0;display:flex;align-items:center;justify-content:center;padding:25px 16px;background:rgba(252,250,254,.38);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);transition:opacity .18s}
+    .shade.hidden{display:none}
+    .dialog{background:rgba(255,255,255,.96);border:1px solid #e9e3f0;box-shadow:0 22px 100px #2a225337,0 2px 12px #2a22530a;border-radius:25px;width:min(100%,440px);padding:clamp(24px,5vw,38px);text-align:left;max-height:95vh;overflow-y:auto}
+    .eyebrow{display:flex;align-items:center;gap:9px;font-weight:850;font-size:10px;letter-spacing:.19em;text-transform:uppercase;color:#7c588d}
+    .eyebrow::before{content:'';width:25px;height:3px;background:linear-gradient(90deg,#236cce,#e13a88);border-radius:5px}
+    h1{font-size:clamp(40px,10vw,61px);font-weight:920;letter-spacing:-.075em;line-height:.95;margin:22px 0 16px;color:#172145}
+    h1 .gradient{background:linear-gradient(100deg,#236bc9 5%,#83418d 60%,#d72c86 100%);background-clip:text;-webkit-background-clip:text;color:transparent}
+    .copy{font-size:14px;line-height:1.65;color:#65708b;margin:0 0 24px;max-width:335px}
+    .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:25px}
+    .chip{border:1px solid #e3e0ed;color:#6e718c;background:#f7f6fa;border-radius:100px;padding:8px 10px;font-size:10px;font-weight:800;letter-spacing:.035em}
+    .cta{width:100%;display:flex;align-items:center;justify-content:space-between;border-radius:13px;padding:15px 17px;border:1px solid #2c3999;font-weight:850;font-size:14px;margin:8px 0;transition:transform .15s}
+    .cta:active{transform:scale(.985)}
+    .primary{background:linear-gradient(105deg,#236cc9,#743ea6 68%,#c52e80);color:white;border:0;box-shadow:0 9px 25px #734dae35}
+    .secondary{color:#424c74;background:#f7f6fc;border-color:#e3e0ee}
+    .cta .arrow{font-size:20px;line-height:1}
+    .fine{font-size:11px;line-height:1.55;color:#9496a6;margin:17px 0 0}
+    .best{display:block;font-weight:800;color:#4b5a82}
+    .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(10px);z-index:8;opacity:0;pointer-events:none;background:#192442;color:white;padding:11px 16px;border-radius:11px;font-size:12px;white-space:nowrap;box-shadow:0 10px 40px #1217353d;transition:opacity .2s,transform .2s;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .joy{position:fixed;z-index:4;left:calc(env(safe-area-inset-left) + 22px);bottom:calc(env(safe-area-inset-bottom) + 69px);width:136px;height:136px;touch-action:none;user-select:none;-webkit-user-select:none;display:grid;place-items:center}
+    .joy.hidden{display:none}
+    .joyring{position:absolute;width:128px;height:128px;border:1px solid #a1adc9a1;border-radius:50%;background:#eef0f9a6;box-shadow:0 8px 35px #2e397d23,inset 0 0 0 14px #ffffff71;backdrop-filter:blur(6px)}
+    .joyring::before,.joyring::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#90a3c2;opacity:.4}
+    .joyring::before{width:65px;height:1px}.joyring::after{width:1px;height:65px}
+    .knob{position:absolute;width:55px;height:55px;border-radius:50%;background:linear-gradient(135deg,#4f85d0,#625ba7);border:4px solid #f8fbff;box-shadow:0 6px 18px #2e438e60;will-change:transform}
+    .hidden{display:none}
+    @media(max-width:670px){.topbar{padding-top:calc(env(safe-area-inset-top) + 9px);padding-left:10px;padding-right:10px}.brand{gap:7px;padding:10px 9px}.brandmark{width:17px;height:17px}.brand strong{font-size:10px}.brand small{font-size:8px}.stat{min-width:58px;padding:8px 10px}.stat strong{font-size:14px}.tools{padding:3px;gap:0}.tool{min-width:35px;padding:0 4px;font-size:9px}.hudright{gap:5px}.status{bottom:calc(env(safe-area-inset-bottom) + 14px);font-size:8px;padding:9px 12px;letter-spacing:.1em}.joy{transform:scale(.86);transform-origin:bottom left}}
+    @media(max-width:390px){.brand small{display:none}.brand{padding:9px}.stat{padding:6px;min-width:54px}.tools .tool{min-width:31px}.status{max-width:98vw;overflow:hidden;text-overflow:ellipsis}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+<canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
+<header class="topbar">
+  <div class="brand"><div class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><strong>TILT / LABYRINTH</strong><small>NIGHTMARE EDITION</small></div></div>
+  <div class="hudright">
+    <div class="stat"><span>TIME</span><strong id="clock">00:00</strong></div>
+    <div class="tools">
+      <button id="calibrate" class="tool" title="Recalibrate tilt or center the controller" aria-label="Calibrate tilt">CAL</button>
+      <button id="mode" class="tool" title="Switch between tilt and touch" aria-label="Switch controls">TOUCH</button>
+      <button id="pause" class="tool" title="Pause game" aria-label="Pause game">Ⅱ</button>
+      <button id="restart" class="tool" title="New hard maze" aria-label="Generate new maze">↻</button>
+    </div>
+  </div>
+</header>
+<div class="status" id="status"><span class="live"></span> BLUE START → PINK FINISH · NO HINTS</div>
+<div class="joy hidden" id="joystick" aria-label="Onscreen movement joystick"><div class="joyring"></div><div class="knob" id="knob"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="shade" id="overlay">
+  <section class="dialog" aria-labelledby="dialogTitle">
+    <div class="eyebrow" id="dialogEyebrow">THE MAZE AWAITS</div>
+    <h1 id="dialogTitle">TILT<br><span class="gradient">LABYRINTH.</span></h1>
+    <p class="copy" id="dialogCopy">Navigate a maze of wrong turns. Tilt your phone to roll the marble from the blue entrance to the pink exit. Every maze has exactly one guaranteed route.</p>
+    <div class="chips" id="dialogChips"><span class="chip">45 × 27 CELLS</span><span class="chip">REAL BALL PHYSICS</span><span class="chip">NO MINIMAP</span></div>
+    <button class="cta primary" id="tiltStart">Enable tilt & play <span class="arrow" aria-hidden="true">↗</span></button>
+    <button class="cta secondary" id="touchStart">Touch / keyboard instead <span class="arrow" aria-hidden="true">→</span></button>
+    <p class="fine" id="dialogFine">Open on your phone in Chrome or Safari over HTTPS, not inside a file preview. Hold it comfortably before tapping Enable tilt. Desktop: WASD or arrow keys.</p>
+  </section>
+</div>
+<script>
+(()=>{'use strict';
+  // Grid model: each cell stores solid edges, N/E/S/W. Recursive backtracking
+  // produces a fully connected perfect maze: all cells reachable and one route
+  // between any pair. No hand-drawn gaps, disconnected endpoints or invisible walls.
+  const C=45,R=27,S=36,T=4.6,RAD=6.6,W=C*S,H=R*S;
+  const N=1,E=2,SO=4,WE=8;
+  const DIRS=[[0,-1,N,SO],[1,0,E,WE],[0,1,SO,N],[-1,0,WE,E]];
+  const $=id=>document.getElementById(id);
+  const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false});
+  const overlay=$('overlay'),statusEl=$('status'),joy=$('joystick'),knob=$('knob');
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const mazeTexture=document.createElement('canvas');mazeTexture.width=W;mazeTexture.height=H;
+  const mctx=mazeTexture.getContext('2d',{alpha:false});
+  let grid,seed=0,pathLength=0,deadEnds=0;
+  let phase='intro',control='touch',elapsed=0,bumpCount=0,lastBump=-1,best=null;
+  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,camX=0,camY=0;
+  let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
+  let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
+  let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
+  let smoothX=0,smoothY=0,manualX=0,manualY=0,keyX=0,keyY=0;
+  const pressed=new Set();
+  let toastTimer,missingSensorTimer;
+  try{best=Number(localStorage.getItem('tilt-labyrinth-best'))||null}catch(_){/* private context */}
+
+  function randGen(input){let a=input>>>0;return ()=>{a+=0x6d2b79f5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+  function buildMaze(input){
+    let random=randGen(input),walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),start=(R-1)*C,stack=[start];seen[start]=1;
+    while(stack.length){
+      let a=stack[stack.length-1],x=a%C,y=(a/C)|0,available=[];
+      for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R&&!seen[ny*C+nx])available.push([ny*C+nx,bit,op])}
+      if(!available.length){stack.pop();continue}
+      const [b,bit,op]=available[(random()*available.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
+    }
+    // Independently validate the shortest start->goal route with a BFS.
+    let queue=new Int32Array(C*R),dist=new Int32Array(C*R).fill(-1),head=0,tail=1;queue[0]=start;dist[start]=0;
+    while(head<tail){let a=queue[head++],x=a%C,y=(a/C)|0;
+      for(const [dx,dy,bit] of DIRS){let nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=C||ny>=R||(walls[a]&bit))continue;let b=ny*C+nx;if(dist[b]!==-1)continue;dist[b]=dist[a]+1;queue[tail++]=b}
+    }
+    let dead=0;for(let a=0;a<walls.length;a++){let open=4-((walls[a]&1)!==0)-((walls[a]&2)!==0)-((walls[a]&4)!==0)-((walls[a]&8)!==0);if(open===1)dead++}
+    return {walls,route:dist[C-1],connected:tail===C*R,dead};
+  }
+  function makeNewMaze(){
+    // Select a longer solution from a handful of randomized, mathematically valid mazes.
+    let candidate=null,chosenSeed=0;
+    for(let i=0;i<22;i++){
+      const trialSeed=((Math.random()*0xffffffff)>>>0)||1;const trial=buildMaze(trialSeed);
+      if(!trial.connected||trial.route<0)throw new Error('Maze connectivity invariant failed');
+      if(!candidate||trial.route>candidate.route){candidate=trial;chosenSeed=trialSeed}
+      if(candidate.route>=490)break;
+    }
+    grid=candidate.walls;pathLength=candidate.route;deadEnds=candidate.dead;seed=chosenSeed;
+    paintMaze();resetBall();
+  }
+  function paintMaze(){
+    mctx.fillStyle='#fffefe';mctx.fillRect(0,0,W,H);
+    let wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H);
+    const gradient=mctx.createLinearGradient(0,H,W,0);
+    gradient.addColorStop(0,'#2879bd');gradient.addColorStop(.27,'#365a9e');gradient.addColorStop(.54,'#713b83');gradient.addColorStop(.76,'#a32f80');gradient.addColorStop(1,'#be2f70');
+    mctx.lineWidth=T;mctx.lineCap='square';mctx.lineJoin='miter';mctx.strokeStyle=gradient;
+    mctx.beginPath();
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+      const wall=grid[r*C+c],x=c*S,y=r*S;
+      if(wall&N){mctx.moveTo(x,y);mctx.lineTo(x+S,y)}
+      if(wall&WE){mctx.moveTo(x,y);mctx.lineTo(x,y+S)}
+    }
+    // The outside perimeter is a barrier in gameplay and in the drawing.
+    mctx.moveTo(W,0);mctx.lineTo(W,H);mctx.lineTo(0,H);
+    mctx.stroke();
+  }
+  function resetBall(){px=S/2;py=H-S/2;vx=vy=0;elapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;manualX=manualY=0;knob.style.transform='translate(0,0)';
+    updateClock();camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();}
+  function resize(){width=window.innerWidth;height=window.innerHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
+    canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+    const portrait=height>width;
+    zoom=Math.max(width/(S*(portrait?12.5:23)),height/(S*(portrait?23:15)));
+    zoom=Math.min(zoom,Math.max(width,height)/260); // keep ball and walls navigable on small screens
+    restrictCamera();}
+  function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
+  function updateCamera(dt){const vw=width/zoom,vh=height/zoom;
+    const targetX=W>vw?clamp(px-vw/2,0,W-vw):(W-vw)/2;
+    const targetY=H>vh?clamp(py-vh/2,0,H-vh):(H-vh)/2;
+    const f=1-Math.exp(-dt*8);camX+=(targetX-camX)*f;camY+=(targetY-camY)*f;}
+  function updateClock(){let n=Math.floor(elapsed);$('clock').textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
+  function toast(msg){let el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2450)}
+  function updateControls(){joy.classList.toggle('hidden',!(phase==='playing'&&control==='touch'));
+    $('mode').textContent=control==='tilt'?'TILT':'TOUCH';$('calibrate').style.opacity=control==='tilt'?'1':'.45';
+    updateSensorStatus();
+  }
+  function updateSensorStatus(){
+    let message='BLUE START → PINK FINISH · NO HINTS',level='ok';
+    if(sensorProblem){message=sensorProblem;level='error'}
+    else if(phase==='playing'&&control==='touch')message='TOUCH CONTROL · DRAG JOYSTICK OR USE KEYS';
+    else if(phase==='playing'&&control==='tilt'){
+      if(!hasSensor){message='WAITING FOR PHONE TILT DATA…';level='waiting'}
+      else if(performance.now()-sensorTime>2500){message='SENSOR STOPPED · TAP TILT TO RETRY';level='error'}
+      else{const [x,y]=currentTilt();message=`TILT LIVE (${sensorSource}) · X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`}
+    }
+    statusEl.dataset.level=level;
+    statusEl.innerHTML='<span class="live"></span>';
+    statusEl.appendChild(document.createTextNode(message));
+  }
+  function angleDelta(a,b){let d=a-b;while(d>180)d-=360;while(d< -180)d+=360;return d}
+  function screenAngle(){let a=screen.orientation?.angle;if(!Number.isFinite(a))a=window.orientation||0;return a*Math.PI/180}
+  function currentTilt(){if(!raw||!baseline||!hasSensor||performance.now()-sensorTime>2500)return [0,0];
+    let dx=angleDelta(raw.gamma,baseline.gamma),dy=angleDelta(raw.beta,baseline.beta);
+    let angle=screenAngle(),cos=Math.cos(angle),sin=Math.sin(angle);
+    let sx=dx*cos-dy*sin,sy=dx*sin+dy*cos;
+    const norm=v=>Math.sign(v)*clamp((Math.abs(v)-1.1)/11,0,1);
+    return [norm(sx),norm(sy)];}
+  function calibrate(){if(!raw||performance.now()-sensorTime>2500){pendingCalibration=true;toast('Waiting for live phone motion data');return}
+    baseline={beta:raw.beta,gamma:raw.gamma};pendingCalibration=false;smoothX=smoothY=0;vx=vy=0;toast('Tilt centered — now tilt the phone');updateSensorStatus();}
+  function acceptSensor(sample,source){
+    if(control!=='tilt')return;
+    if(source!==sensorSource){sensorSource=source;pendingCalibration=true;}
+    raw=sample;hasSensor=true;sensorTime=performance.now();sensorProblem='';
+    if(pendingCalibration||!baseline){baseline={...raw};pendingCalibration=false;toast('Tilt sensor active · move the phone')}
+  }
+  function sensorEvent(event){
+    if(!Number.isFinite(event.beta)||!Number.isFinite(event.gamma))return;
+    orientationTime=performance.now();
+    acceptSensor({beta:event.beta,gamma:event.gamma},'orientation');
+  }
+  function motionEvent(event){
+    // Gravity is a robust backup when a browser omits orientation angles.
+    // The constant converts a measured g-axis projection into approximate degrees.
+    const g=event.accelerationIncludingGravity;
+    if(!g||!Number.isFinite(g.x)||!Number.isFinite(g.y))return;
+    if(performance.now()-orientationTime<1500)return; // Prefer orientation when available.
+    const degrees=v=>Math.asin(clamp(v/9.81,-1,1))*180/Math.PI;
+    acceptSensor({gamma:degrees(g.x),beta:degrees(g.y)},'gravity');
+  }
+  function beginSensor(){if(orientListening)return;
+    window.addEventListener('deviceorientation',sensorEvent);
+    window.addEventListener('devicemotion',motionEvent);
+    orientListening=true;
+  }
+  function explainSensorFailure(message){
+    sensorProblem=message;control='touch';updateControls();
+    const advice=message+'. Open this game on an HTTPS site in your phone’s full Chrome/Safari browser; allow Motion & Orientation access. Use Touch instead if your browser blocks sensors.';
+    if(phase==='intro'||phase==='paused'||phase==='won'){$('dialogFine').textContent=advice;overlay.classList.remove('hidden')}
+    toast(message);
+  }
+  async function beginTilt(){
+    sensorProblem='';
+    if(!window.isSecureContext){explainSensorFailure('Tilt blocked: the page is not in a secure context');return}
+    const oriAvailable=typeof DeviceOrientationEvent!=='undefined';
+    const motionAvailable=typeof DeviceMotionEvent!=='undefined';
+    if(!oriAvailable&&!motionAvailable){explainSensorFailure('This browser exposes no motion-sensor API');return}
+    try{
+      // Construct BOTH permission promises synchronously inside the user click.
+      // iPhone Safari can require permission for orientation and motion separately.
+      const requests=[];
+      if(oriAvailable&&typeof DeviceOrientationEvent.requestPermission==='function')requests.push(DeviceOrientationEvent.requestPermission());
+      if(motionAvailable&&typeof DeviceMotionEvent.requestPermission==='function')requests.push(DeviceMotionEvent.requestPermission());
+      if(requests.length){
+        const results=await Promise.allSettled(requests);
+        if(!results.some(result=>result.status==='fulfilled'&&result.value==='granted')){
+          explainSensorFailure('Phone motion permission was not granted');return;
+        }
+      }
+    }catch(err){explainSensorFailure('Motion permission error: '+(err?.message||'not allowed'));return}
+    control='tilt';sensorProblem='';pendingCalibration=true;baseline=null;raw=null;hasSensor=false;sensorSource='none';
+    orientationTime=-Infinity;beginSensor();
+    if(phase==='intro'||phase==='won')launch();
+    else if(phase==='paused'){phase='playing';overlay.classList.add('hidden');updateControls()}
+    else updateControls();
+    clearTimeout(missingSensorTimer);
+    missingSensorTimer=setTimeout(()=>{
+      if(phase==='playing'&&control==='tilt'&&!hasSensor){
+        sensorProblem='NO SENSOR DATA · OPEN HTTPS IN CHROME/SAFARI';
+        updateSensorStatus();
+        toast('Motion data blocked. Open this HTML on an HTTPS site in a full browser.');
+      }
+    },6500);
+  }
+  function launch(){phase='playing';overlay.classList.add('hidden');resetBall();updateControls();tLast=performance.now()}
+  function showDialog(title,eyebrow,copy,primaryLabel,secondaryLabel){
+    $('dialogTitle').innerHTML=title;$('dialogEyebrow').textContent=eyebrow;$('dialogCopy').textContent=copy;
+    $('tiltStart').innerHTML=primaryLabel+' <span class="arrow" aria-hidden="true">↗</span>';
+    $('touchStart').innerHTML=secondaryLabel+' <span class="arrow" aria-hidden="true">→</span>';
+    $('dialogChips').classList.add('hidden');$('dialogFine').innerHTML='Best finish: <span class="best">'+(best?formatTime(best):'Not yet completed')+'</span>';
+    overlay.classList.remove('hidden');updateControls();
+  }
+  function formatTime(seconds){let s=Math.floor(seconds);return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+  function pause(){if(phase!=='playing')return;phase='paused';vx=vy=0;manualX=manualY=keyX=keyY=0;showDialog('PAUSED<span class="gradient">.</span>','TAKE YOUR TIME','Your marble will stay in place until you resume. The timer is frozen.','Resume with tilt','Resume with touch / keys')}
+  function win(){phase='won';if(!best||elapsed<best){best=elapsed;try{localStorage.setItem('tilt-labyrinth-best',String(best))}catch(_){}}
+    showDialog('YOU <span class="gradient">ESCAPED.</span>','MAZE COMPLETE',`You beat ${pathLength} turns of possible confusion in ${formatTime(elapsed)} with ${bumpCount} wall contacts. Ready for another?`,'New maze · tilt','New maze · touch')}
+  function hit(){if(elapsed-lastBump>.24){bumpCount++;lastBump=elapsed}}
+  function moveX(dt){if(Math.abs(vx)<.0001)return;const c=clamp(Math.floor(px/S),0,C-1),r=clamp(Math.floor(py/S),0,R-1),wall=grid[r*C+c];let next=px+vx*dt;
+    if(vx>0&&(wall&E)){const lim=(c+1)*S-RAD-T/2;if(next>lim){next=lim;vx=-vx*.1;hit()}}
+    else if(vx<0&&(wall&WE)){const lim=c*S+RAD+T/2;if(next<lim){next=lim;vx=-vx*.1;hit()}}
+    px=clamp(next,RAD+T/2,W-RAD-T/2);
+  }
+  function moveY(dt){if(Math.abs(vy)<.0001)return;const c=clamp(Math.floor(px/S),0,C-1),r=clamp(Math.floor(py/S),0,R-1),wall=grid[r*C+c];let next=py+vy*dt;
+    if(vy>0&&(wall&SO)){const lim=(r+1)*S-RAD-T/2;if(next>lim){next=lim;vy=-vy*.1;hit()}}
+    else if(vy<0&&(wall&N)){const lim=r*S+RAD+T/2;if(next<lim){next=lim;vy=-vy*.1;hit()}}
+    py=clamp(next,RAD+T/2,H-RAD-T/2);
+  }
+  function update(dt){
+    elapsed+=dt;updateClock();
+    let targetX=0,targetY=0;
+    keyX=Number(pressed.has('ArrowRight')||pressed.has('d'))-Number(pressed.has('ArrowLeft')||pressed.has('a'));
+    keyY=Number(pressed.has('ArrowDown')||pressed.has('s'))-Number(pressed.has('ArrowUp')||pressed.has('w'));
+    if(keyX||keyY){targetX=keyX;targetY=keyY}
+    else if(control==='touch'){targetX=manualX;targetY=manualY}
+    else if(control==='tilt'){[targetX,targetY]=currentTilt()}
+    smoothX+=(targetX-smoothX)*clamp(dt*13,0,1);smoothY+=(targetY-smoothY)*clamp(dt*13,0,1);
+    const magnitude=Math.hypot(smoothX,smoothY);if(magnitude>1){smoothX/=magnitude;smoothY/=magnitude}
+    const accel=650;vx+=smoothX*accel*dt;vy+=smoothY*accel*dt;
+    const drag=Math.pow(.91,dt*60);vx*=drag;vy*=drag;
+    let speed=Math.hypot(vx,vy);if(speed>175){vx*=175/speed;vy*=175/speed}
+    // Sub-stepping rules out tunneling through walls during slower display frames.
+    const steps=Math.max(1,Math.ceil(Math.max(Math.abs(vx),Math.abs(vy))*dt/3));
+    for(let i=0;i<steps;i++){moveX(dt/steps);moveY(dt/steps)}
+    trailTimer+=dt;if(trailTimer>.033){trailTimer=0;trail.push([px,py]);if(trail.length>22)trail.shift()}
+    if(Math.hypot(px-(W-S/2),py-S/2)<9.5)win();
+  }
+  function drawGoal(time){
+    const x=W-S/2,y=S/2;
+    ctx.save();
+    let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,'#ed4caa35');aura.addColorStop(1,'#ed4caa00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#b52a84';ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
+    ctx.fillStyle='#e64caa';ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();
+    const sx=S/2,sy=H-S/2;ctx.strokeStyle='#267bdb';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
+  }
+  function drawBall(){
+    for(let i=1;i<trail.length;i++){const a=trail[i],op=(i/trail.length)*.25;ctx.fillStyle=`rgba(27,115,209,${op.toFixed(3)})`;ctx.beginPath();ctx.arc(a[0],a[1],RAD*(.28+.28*i/trail.length),0,Math.PI*2);ctx.fill()}
+    const glow=ctx.createRadialGradient(px,py,0,px,py,18);glow.addColorStop(0,'#378dff3c');glow.addColorStop(1,'#378dff00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px,py,18,0,Math.PI*2);ctx.fill();
+    let grad=ctx.createRadialGradient(px-2.5,py-3,1,px,py,RAD);grad.addColorStop(0,'#fcffff');grad.addColorStop(.24,'#81cafa');grad.addColorStop(.65,'#2367ad');grad.addColorStop(1,'#112e68');
+    ctx.shadowColor='#15498a8c';ctx.shadowBlur=8;ctx.shadowOffsetY=2;ctx.fillStyle=grad;ctx.beginPath();ctx.arc(px,py,RAD,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    ctx.strokeStyle='#e6f9ff';ctx.lineWidth=.7;ctx.stroke();
+  }
+  function draw(now){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#fffefe';ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);drawBall();ctx.restore()}
+  function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
+    if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus()}
+    requestAnimationFrame(frame)}
+  function configureTouch(){const max=43;
+    const move=e=>{const b=joy.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;
+      let dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy);if(len>max){dx=dx*max/len;dy=dy*max/len}
+      manualX=dx/max;manualY=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`};
+    joy.addEventListener('pointerdown',e=>{e.preventDefault();joy.setPointerCapture(e.pointerId);move(e)});
+    joy.addEventListener('pointermove',e=>{if(joy.hasPointerCapture(e.pointerId)){e.preventDefault();move(e)}});
+    const release=()=>{manualX=manualY=0;knob.style.transform='translate(0,0)'};
+    joy.addEventListener('pointerup',release);joy.addEventListener('pointercancel',release);joy.addEventListener('lostpointercapture',release);
+  }
+  async function primaryStart(){
+    if(phase==='won')makeNewMaze();
+    // Revalidate sensor permission on resume (especially important in mobile Safari).
+    await beginTilt();
+  }
+  function secondaryStart(){sensorProblem='';if(phase==='won')makeNewMaze();if(phase==='paused'){phase='playing';control='touch';overlay.classList.add('hidden');updateControls();return}
+    control='touch';launch()}
+  $('tiltStart').addEventListener('click',primaryStart);
+  $('touchStart').addEventListener('click',secondaryStart);
+  $('calibrate').addEventListener('click',()=>{if(control==='tilt'){pendingCalibration=true;calibrate()}else toast('Touch mode uses the joystick or keyboard')});
+  $('mode').addEventListener('click',()=>{if(phase==='intro')return;
+    if(control==='tilt'){control='touch';sensorProblem='';manualX=manualY=0;updateControls();toast('Touch / keyboard controls enabled')}
+    else{beginTilt()}});
+  $('pause').addEventListener('click',()=>{if(phase==='playing')pause();else if(phase==='paused'){phase='playing';overlay.classList.add('hidden');updateControls()}});
+  $('restart').addEventListener('click',()=>{makeNewMaze();if(phase==='intro')return;phase='playing';overlay.classList.add('hidden');updateControls();toast('New difficult maze generated')});
+  window.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d',' '].includes(k))e.preventDefault();pressed.add(k);
+    if(k===' '){if(phase==='playing')pause();else if(phase==='paused'){$('touchStart').click()}}
+    if(k==='Enter'&&phase==='intro')$('touchStart').click();
+  },{passive:false});
+  window.addEventListener('keyup',e=>{pressed.delete(e.key.length===1?e.key.toLowerCase():e.key)});
+  window.addEventListener('blur',()=>{pressed.clear();if(phase==='playing')pause()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pressed.clear();if(phase==='playing')pause()}});
+  window.addEventListener('resize',resize);
+  screen.orientation?.addEventListener?.('change',()=>{if(control==='tilt'){pendingCalibration=true;baseline=null;toast('Screen turned — recalibrating')}});
+  configureTouch();resize();makeNewMaze();requestAnimationFrame(frame);
+  // Read-only diagnostics used to check actual maze solvability and controls.
+  window.__mazeDebug={state:()=>({phase,control,px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,connected:true,hasSensor,sensorSource,sensorProblem,tilt:currentTilt(),columns:C,rows:R}),
+    walls:()=>Array.from(grid),onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}})};
+})();
+</script>
+</body>
+</html>
