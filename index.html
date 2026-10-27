@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#fdfbff">
-  <meta name="description" content="Ten classic labyrinths and five special-shaped gyro-only mazes. No touch movement.">
-  <title>Tilt Labyrinth V5 | Special Shape Mazes — Gyro Only</title>
+  <meta name="description" content="Landscape-first gyro maze game with named players, personal records, ten classic and five special levels.">
+  <title>Tilt Labyrinth V6 | Landscape & Player Records</title>
   <style>
     :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
     *{box-sizing:border-box}
@@ -75,6 +75,43 @@
     .special-tile small{font-size:9px;font-weight:700;color:#7f83a0}
     .special-tile:last-child:nth-child(odd){grid-column:1/-1;min-height:95px}
     .picker-tabs.hidden{display:none}
+    /* V6: compact landscape HUD, persistent player records and profile entry. */
+    .player-pill{max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0;text-transform:none}
+    .profile-entry{margin:0 0 14px;padding:13px;border:1px solid #e5e0ef;border-radius:14px;background:#faf9fe}
+    .profile-entry.hidden{display:none}
+    .profile-entry label{display:block;margin-bottom:8px;font-size:11px;font-weight:850;color:#465371;letter-spacing:.07em}
+    .profile-entry input{display:block;width:100%;height:43px;min-width:0;padding:9px 12px;border:1px solid #b9c4da;border-radius:10px;color:#16284e;background:white;font-size:16px;font-weight:600;font-family:inherit;letter-spacing:normal}
+    .profile-entry input:focus{outline:2px solid #416dd7;outline-offset:1px}
+    .profile-entry small{display:block;color:#6d758e;line-height:1.4;margin-top:8px;font-size:10px}
+    .record-line{margin:11px 0 0;border-top:1px solid #e7e2ef;padding-top:10px;font-size:11px;color:#515e7b;line-height:1.6}
+    .record-line strong{color:#253a74}
+    .local-standings{margin-top:9px;font-size:10px;color:#65708b;line-height:1.5}
+    .local-standings:empty{display:none}
+    .profile-button{border:1px solid #e3def0;border-radius:11px;background:#f7f6fb;min-width:0;max-width:130px;height:35px;padding:0 11px;font-size:11px;font-weight:800;color:#3f4c76;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .profile-button:focus-visible{outline:2px solid #416dd7}
+    .landscape-hint{display:none;margin:0 auto 8px;color:#73518d;font-size:10px;font-weight:700;text-align:center}
+    @media (orientation:portrait) and (max-width:700px){.landscape-hint{display:block}}
+    @media (orientation:landscape) and (max-height:560px){
+      .topbar{padding:4px max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left));gap:6px;flex-wrap:nowrap}
+      .brand{padding:4px 7px;gap:6px;flex:0 1 auto}.brand small{display:none}
+      .hudright{width:auto;gap:4px;flex-wrap:nowrap}
+      .stat{padding:3px 7px;min-width:62px}.stat span{font-size:8px}.stat strong{font-size:13px}
+      .level-stat{min-width:65px}.tools{gap:0;padding:1px}.tools .tool{height:30px;min-width:29px;font-size:9px}
+      .profile-button{height:30px;max-width:100px;padding:0 6px;font-size:10px}
+      .bottom-bar{min-height:32px;padding:3px 9px}.status{font-size:8px;padding:4px 9px}
+      .shade{padding:5px 14px}.dialog{width:min(95vw,590px);max-height:calc(100dvh - 10px);padding:17px 23px;border-radius:16px}
+      .dialog h1{display:flex;flex-wrap:wrap;gap:8px;font-size:28px;margin:7px 0}.dialog h1 br{display:none}.copy{font-size:11px;line-height:1.3;margin-bottom:8px;max-width:none}
+      .chips{display:none}.profile-entry{padding:8px;margin-bottom:8px}
+      .profile-entry input{height:37px}.record-line{margin-top:5px;padding-top:6px}.local-standings{margin-top:4px}
+      .cta{padding:9px 12px;font-size:12px;margin:5px 0}.fine{font-size:10px;margin-top:7px}
+      .level-picker{margin:8px 0 12px}.level-tile{min-height:47px}.special-picker{margin:6px 0 9px;grid-template-columns:repeat(5,minmax(0,1fr))}
+      .special-tile{min-height:75px}.special-tile:last-child:nth-child(odd){grid-column:auto;min-height:75px}
+      .special-tile svg{width:55px;height:36px}.special-tile small{display:none}
+    }
+    @media (max-width:670px) and (orientation:portrait){
+      .hudright{flex-wrap:wrap}.profile-button{max-width:150px;flex:0 0 auto}
+      .stat.record-stat{min-width:65px}.stat.record-stat strong{font-size:13px}
+    }
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
     /* V3: The HUD and sensor status belong to document layout, not over the maze. */
     body{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0}
@@ -111,6 +148,19 @@
     @media(max-height:560px) and (orientation:landscape){
       .topbar{flex-wrap:nowrap}.hudright{width:auto}.bottom-bar.touch-active{min-height:105px}
     }
+
+    /* Final layout overrides: placed after the legacy V3 breakpoints. */
+    @media (orientation:landscape) and (max-height:560px){
+      .topbar{padding-top:4px;padding-bottom:4px}
+      .bottom-bar{min-height:32px;padding:3px 9px}
+      .hudright{flex-wrap:nowrap}
+    }
+    @media (orientation:portrait) and (max-width:670px){
+      .hudright{width:100%;flex-wrap:wrap;justify-content:center;gap:5px}
+      .stat{flex:1 1 65px}.profile-button{flex:1 1 98px;max-width:none}
+      .tools{flex:1 1 140px;justify-content:space-evenly;margin-left:0}
+      .tools .tool{min-width:32px;flex:1 1 auto}
+    }
   </style>
 </head>
 <body>
@@ -119,6 +169,8 @@
   <div class="hudright">
     <div class="stat level-stat"><span>LEVEL</span><strong id="levelLabel">01 / 10</strong></div>
     <div class="stat"><span>TIME</span><strong id="clock">00:00</strong></div>
+    <div class="stat record-stat"><span>BEST SCORE</span><strong id="highScore">0</strong></div>
+    <button id="profileButton" class="profile-button" title="Switch player" aria-label="Switch player">PLAYER</button>
     <div class="tools">
       <button id="calibrate" class="tool" title="Recalibrate phone tilt" aria-label="Calibrate tilt">CAL</button>
       <button id="levels" class="tool" title="Choose an unlocked level" aria-label="Choose level">LVL</button>
@@ -139,7 +191,15 @@
     <div class="eyebrow" id="dialogEyebrow">THE MAZE AWAITS</div>
     <h1 id="dialogTitle">TILT<br><span class="gradient">LABYRINTH.</span></h1>
     <p class="copy" id="dialogCopy">Ten classic labyrinths plus five special-shaped mazes: Circle, Butterfly, Halloween Cat, Star, and Carrot. Gyroscope controls only. Every maze has a verified path.</p>
+    <p class="landscape-hint">Rotate your phone to landscape for the best view.</p>
     <div class="chips" id="dialogChips"><span class="chip">10 CLASSIC</span><span class="chip">5 SPECIAL</span><span class="chip">GYRO ONLY</span></div>
+    <div class="profile-entry" id="profileEntry">
+      <label for="playerName">PLAYER NAME</label>
+      <input id="playerName" type="text" inputmode="text" enterkeyhint="done" autocomplete="nickname" maxlength="18" placeholder="Enter a player name" />
+      <small>Use a nickname, not your full name. Your scores and last level stay on this browser only.</small>
+      <div class="record-line" id="playerRecord" role="status">Enter a name to create or continue a record.</div>
+      <div class="local-standings" id="localStandings"></div>
+    </div>
     <div class="picker-tabs hidden" id="pickerTabs"><button class="picker-tab selected" id="classicTab">CLASSIC · 10</button><button class="picker-tab" id="specialTab">SPECIAL · 5</button></div>
     <div class="level-picker hidden" id="levelPicker" aria-label="Unlocked classic levels"></div>
     <div class="special-picker hidden" id="specialPicker" aria-label="Special-shaped mazes"></div>
@@ -192,6 +252,69 @@
   let smoothX=0,smoothY=0;
   let toastTimer,missingSensorTimer;
   let levelIndex=0,unlocked=0,courseSeed=0,levelResults={},mode='classic',specialIndex=0,specialResults={};
+  const PROFILE_STORE='tilt-labyrinth-v6-profiles';
+  const ACTIVE_STORE='tilt-labyrinth-v6-active';
+  let profiles=Object.create(null),activePlayerKey='',playerProfile=null,legacyProgress=null;
+  const safeRead=(key)=>{try{return localStorage.getItem(key)}catch(_){return null}};
+  const safeWrite=(key,value)=>{try{localStorage.setItem(key,value)}catch(_){/* volatile fallback */}};
+  function cleanName(name){return String(name||'').trim().replace(/\s+/g,' ').slice(0,18)}
+  const profileKey=name=>cleanName(name).toLocaleLowerCase('en-US');
+  function freshProfile(name){return {name,unlocked:0,level:0,mode:'classic',specialIndex:0,classicBest:{},specialBest:{},scores:{},highScore:0,lastPlayed:Date.now()}}
+  function normalizeProfile(data,name){
+    const p=freshProfile(cleanName(name));if(!data||typeof data!=='object')return p;
+    p.unlocked=clamp(Math.floor(Number(data.unlocked)||0),0,LEVELS.length-1);
+    p.level=clamp(Math.floor(Number(data.level)||0),0,p.unlocked);
+    p.specialIndex=clamp(Math.floor(Number(data.specialIndex)||0),0,SPECIALS.length-1);
+    p.mode=data.mode==='special'?'special':'classic';
+    const records=obj=>obj&&typeof obj==='object'&&!Array.isArray(obj)?{...obj}:{};
+    p.classicBest=records(data.classicBest);p.specialBest=records(data.specialBest);
+    p.scores=Object.fromEntries(Object.entries(records(data.scores)).filter(([k,v])=>/^(classic|special):\d+$/.test(k)&&Number.isFinite(v)&&v>0));
+    p.highScore=Math.max(0,...Object.values(p.scores).map(Number));
+    p.lastPlayed=Number.isFinite(data.lastPlayed)?data.lastPlayed:Date.now();return p;
+  }
+  function saveProfiles(){if(!playerProfile)return;
+    playerProfile.unlocked=unlocked;playerProfile.level=levelIndex;playerProfile.mode=mode;playerProfile.specialIndex=specialIndex;
+    playerProfile.classicBest={...levelResults};playerProfile.specialBest={...specialResults};
+    playerProfile.lastPlayed=Date.now();profiles[activePlayerKey]=playerProfile;
+    safeWrite(PROFILE_STORE,JSON.stringify(profiles));safeWrite(ACTIVE_STORE,activePlayerKey);
+    renderPlayerStats();
+  }
+  function playerTotal(p){return Object.values(p?.scores||{}).reduce((sum,n)=>sum+(Number(n)||0),0)}
+  function lastStage(p){return p?.mode==='special' ? SPECIALS[p.specialIndex]?.name||'Circle':`Classic ${Number(p?.level||0)+1}`}
+  function profileForName(name){return profiles[profileKey(name)]||null}
+  function renderPlayerStats(){
+    $('profileButton').textContent=playerProfile?.name||'PLAYER';
+    $('highScore').textContent=Number(playerProfile?.highScore||0).toLocaleString('en-US');
+  }
+  function renderProfilePreview(){
+    const name=cleanName($('playerName').value),p=profileForName(name),el=$('playerRecord');
+    if(!name){el.textContent='Enter a name to create or continue a record.'}
+    else if(p){const when=new Date(p.lastPlayed).toLocaleDateString(undefined,{month:'short',day:'numeric'});el.textContent=`Continue ${lastStage(p)} · Best score ${Number(p.highScore||0).toLocaleString('en-US')} · Total ${playerTotal(p).toLocaleString('en-US')} points · ${Object.keys(p.scores||{}).length}/15 completed · Last played ${when}`;}
+    else{el.textContent=`New player: ${name} · Starts at Classic 1 · No scores yet`;}
+    const ranked=Object.values(profiles).sort((a,b)=>playerTotal(b)-playerTotal(a)).slice(0,3);
+    $('localStandings').textContent=ranked.length?'ON THIS DEVICE · '+ranked.map((x,i)=>`${i+1}. ${x.name}: ${playerTotal(x).toLocaleString('en-US')}`).join('   ·   '):'';
+    $('tiltStart').textContent=p?'Continue · '+lastStage(p):'Create player & play';
+  }
+  function activatePlayer(){
+    const name=cleanName($('playerName').value);
+    if(!name){$('dialogFine').classList.add('error');$('dialogFine').textContent='Enter your player name before playing.';$('playerName').focus();return false}
+    const key=profileKey(name);let p=profiles[key];
+    if(!p){p=freshProfile(name);
+      // Give existing V5 players their prior anonymous completion times once.
+      if(!Object.keys(profiles).length&&legacyProgress){Object.assign(p,legacyProgress);p.name=name;}
+    }
+    playerProfile=normalizeProfile(p,p.name||name);profiles[key]=playerProfile;activePlayerKey=key;
+    unlocked=playerProfile.unlocked;levelIndex=playerProfile.level;mode=playerProfile.mode;specialIndex=playerProfile.specialIndex;
+    levelResults={...playerProfile.classicBest};specialResults={...playerProfile.specialBest};
+    loadLevel(mode==='classic'?levelIndex:specialIndex,mode);saveProfiles();
+    $('profileEntry').classList.add('hidden');
+    return true;
+  }
+  function scoreLevel(time,hits){
+    const base=mode==='classic'?500+(levelIndex+1)*230:950+(specialIndex+1)*280;
+    const timeBonus=Math.round(3200/(1+time/55));
+    return Math.max(100,Math.round(base+pathLength*3+timeBonus-Math.min(hits,150)*4));
+  }
   try{
     unlocked=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-unlocked'))||0,0,LEVELS.length-1);
     levelIndex=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-level'))||0,0,unlocked);
@@ -207,7 +330,18 @@
     courseSeed=secureSeed[0]||Date.now()>>>0;
     try{localStorage.setItem('tilt-labyrinth-v4-seed',String(courseSeed))}catch(_){}
   }
-  function saveProgress(){try{
+  // Restore any previously active named profile without asking again on reload.
+  try{const saved=JSON.parse(safeRead(PROFILE_STORE)||'{}');
+    if(saved&&typeof saved==='object'&&!Array.isArray(saved)){
+      for(const [key,value] of Object.entries(saved).slice(0,50)){
+        const name=cleanName(value?.name);if(name&&profileKey(name)===key)profiles[key]=normalizeProfile(value,name);
+      }
+    }
+  }catch(_){profiles=Object.create(null)}
+  const storedActive=safeRead(ACTIVE_STORE)||'';
+  if(profiles[storedActive]){$('playerName').value=profiles[storedActive].name;}
+  if(!Object.keys(profiles).length){legacyProgress={unlocked,level:levelIndex,mode,specialIndex,classicBest:{...levelResults},specialBest:{...specialResults}}}
+  function saveProgress(){if(playerProfile){saveProfiles();return;}try{
     localStorage.setItem('tilt-labyrinth-v4-level',String(levelIndex));
     localStorage.setItem('tilt-labyrinth-v4-unlocked',String(unlocked));
     localStorage.setItem('tilt-labyrinth-v4-bests',JSON.stringify(levelResults));
@@ -223,6 +357,7 @@
     document.querySelector('.brand small').textContent=mode==='classic'?'NIGHTMARE EDITION':'SPECIAL SHAPE MAZE';
     best=Number(mode==='classic'?levelResults[levelIndex]:specialResults[specialIndex])||null;
     canvas.setAttribute('aria-label',`Top-down ${currentName()} maze. Tilt your phone to move the ball toward the pink target.`);
+    renderPlayerStats();
   }
 
   function randGen(input){let a=input>>>0;return ()=>{a+=0x6d2b79f5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
@@ -547,6 +682,7 @@
     toast(message);
   }
   async function beginTilt(){
+    if(!playerProfile&&!activatePlayer())return;
     sensorProblem='';
     if(!window.isSecureContext){explainSensorFailure('Tilt blocked: the page is not in a secure context');return}
     const oriAvailable=typeof DeviceOrientationEvent!=='undefined';
@@ -583,6 +719,7 @@
   function launch(){phase='playing';overlay.classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');$('tiltStart').classList.remove('hidden');
     resetBall();updateControls();tLast=performance.now()}
   function showDialog(title,eyebrow,copy,primaryLabel,secondaryLabel){
+    $('profileEntry').classList.add('hidden');
     $('dialogTitle').innerHTML=title;$('dialogEyebrow').textContent=eyebrow;$('dialogCopy').textContent=copy;
     $('tiltStart').innerHTML=primaryLabel+' <span class="arrow" aria-hidden="true">↗</span>';
     $('chooseLevel').innerHTML=secondaryLabel+' <span class="arrow" aria-hidden="true">→</span>';
@@ -596,6 +733,9 @@
   function pause(){if(phase!=='playing')return;phase='paused';vx=vy=0;smoothX=smoothY=0;
     showDialog('PAUSED<span class="gradient">.</span>',currentName().toUpperCase(),'The marble stays in place and the clock stops. Tilt the phone to continue.','Resume with tilt','Choose mazes')}
   function win(){if(phase!=='playing')return;phase='won';
+    const earned=scoreLevel(elapsed,bumpCount),scoreKey=`${mode}:${mode==='classic'?levelIndex:specialIndex}`;
+    if(playerProfile){playerProfile.scores[scoreKey]=Math.max(Number(playerProfile.scores[scoreKey])||0,earned);
+      playerProfile.highScore=Math.max(Number(playerProfile.highScore)||0,earned);}
     if(!best||elapsed<best){best=elapsed;if(mode==='classic')levelResults[levelIndex]=Number(elapsed.toFixed(2));
       else specialResults[specialIndex]=Number(elapsed.toFixed(2));}
     const isFinal=currentNumber()===currentTotal();
@@ -603,7 +743,7 @@
     saveProgress();
     showDialog(isFinal?'CHALLENGE <span class="gradient">CLEARED.</span>':'MAZE <span class="gradient">COMPLETE.</span>',
       `${currentName().toUpperCase()} COMPLETE`,
-      `Finished in ${formatTime(elapsed)} with ${bumpCount} wall contacts. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
+      `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${bumpCount} wall contacts. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
       isFinal?'Replay this series':'Next maze · tilt','Choose mazes');
   }
   const shapeIcons={
@@ -637,6 +777,7 @@
     });
   }
   function openLevelPicker(){
+    if(!playerProfile){showProfileDialog();return;}
     if(phase==='playing'){phase='paused';vx=vy=0;smoothX=smoothY=0}
     else if(phase!=='won'&&phase!=='intro'&&phase!=='paused'&&phase!=='select')return;
     phase='select';
@@ -649,6 +790,24 @@
     $('dialogFine').classList.remove('error');$('dialogFine').textContent='Choose a maze to start. Gyroscope permission is required; menus can be tapped.';
     overlay.classList.remove('hidden');updateControls();
   }
+  function showProfileDialog(){
+    if(phase==='playing'){phase='paused';vx=vy=0;smoothX=smoothY=0;}
+    const previousName=playerProfile?.name||$('playerName').value;
+    playerProfile=null;activePlayerKey='';phase='intro';
+    $('playerName').value=previousName;
+    $('dialogTitle').innerHTML='TILT <span class="gradient">LABYRINTH.</span>';
+    $('dialogEyebrow').textContent='LANDSCAPE · PERSONAL RECORDS';
+    $('dialogCopy').textContent='Enter your name, tilt your phone to navigate, and return to your last level anytime. Classic and Special mazes are gyro only.';
+    $('dialogChips').classList.remove('hidden');$('profileEntry').classList.remove('hidden');
+    picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');
+    $('tiltStart').classList.remove('hidden');$('chooseLevel').classList.add('hidden');
+    $('dialogFine').classList.remove('error');$('dialogFine').textContent='HTTPS and phone motion permission required. Turn your phone sideways for a wider playing area.';
+    $('playerName').value=playerProfile?.name||$('playerName').value;
+    renderProfilePreview();overlay.classList.remove('hidden');updateControls();
+  }
+  $('playerName').addEventListener('input',renderProfilePreview);
+  $('playerName').addEventListener('keydown',event=>{if(event.key==='Enter'){$('playerName').blur();primaryStart();}});
+  $('profileButton').addEventListener('click',showProfileDialog);
   $('classicTab').addEventListener('click',()=>renderPicker('classic'));
   $('specialTab').addEventListener('click',()=>renderPicker('special'));
   function hit(){if(elapsed-lastBump>.24){bumpCount++;lastBump=elapsed}}
@@ -705,6 +864,7 @@
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus()}
     requestAnimationFrame(frame)}
   async function primaryStart(){
+    if(!playerProfile&& !activatePlayer())return;
     if(phase==='won'){
       if(currentNumber()===currentTotal()){loadLevel(0,mode)}
       else loadLevel((mode==='classic'?levelIndex:specialIndex)+1,mode);
@@ -731,13 +891,14 @@
   window.addEventListener('resize',resize);
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(playfield);
   screen.orientation?.addEventListener?.('change',()=>{pendingCalibration=true;baseline=null;toast('Screen turned — recalibrating')});
-  resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);requestAnimationFrame(frame);
+  resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
       px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,connected:true,hasSensor,sensorSource,sensorProblem,
       tilt:currentTilt(),columns:C,rows:R}),
     walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
-    onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}})};
+    onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}}),
+    profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null};
 })();
 </script>
 </body>
