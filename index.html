@@ -397,6 +397,16 @@
     html[data-look="new"] body[data-ui-mode="night"] .cta.primary{background:#e9eefc;color:#101a38;box-shadow:0 12px 28px #0007}
     html[data-look="new"] body[data-ui-mode="night"] .cta.secondary{background:transparent;border-color:#46567e;color:#e5edff}
     html[data-look="new"] body[data-ui-mode="night"] .profile-entry input{border-color:#586984}
+    /* Zoom buttons: camera scale only. Physics, walls and scoring never read the zoom value. */
+    .zoom-ctl{position:absolute;z-index:3;top:10px;right:max(10px,env(safe-area-inset-right));display:flex;flex-direction:column;border:1px solid #c9d0e4;border-radius:12px;background:#ffffffe8;box-shadow:0 6px 18px #1a244a26;overflow:hidden;-webkit-tap-highlight-color:transparent}
+    .zoom-ctl.hidden{display:none}
+    .zoom-ctl button{width:44px;height:44px;padding:0;border:0;background:none;color:#12193a;font:600 24px/1 system-ui,sans-serif;touch-action:manipulation;cursor:pointer}
+    .zoom-ctl button:active{background:#e4e8f5}
+    .zoom-ctl button:disabled{opacity:.35}
+    .zoom-ctl .zoom-level{height:30px;border-top:1px solid #dde1ee;border-bottom:1px solid #dde1ee;font:700 11px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#4a557a;letter-spacing:0}
+    body[data-ui-mode="night"] .zoom-ctl{background:#101a36ee;border-color:#34436a}
+    body[data-ui-mode="night"] .zoom-ctl button{color:#eaf2ff}
+    body[data-ui-mode="night"] .zoom-ctl .zoom-level{color:#a9b8da;border-color:#34436a}
   </style>
 </head>
 <body>
@@ -419,6 +429,11 @@
 </header>
 <main class="playfield" id="playfield" aria-label="Maze play area">
   <canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
+  <div class="zoom-ctl" id="zoomCtl" role="group" aria-label="Maze zoom">
+    <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+    <button type="button" id="zoomLevel" class="zoom-level" aria-label="Reset zoom" title="Reset zoom">100%</button>
+    <button type="button" id="zoomOut" aria-label="Zoom out">&minus;</button>
+  </div>
 </main>
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
@@ -616,7 +631,8 @@
   const cellPos=i=>[i%C*S+S/2,Math.floor(i/C)*S+S/2];
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
   let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
-  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,camX=0,camY=0;
+  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,userZoom=1,camX=0,camY=0;
+  const ZOOM_MIN=.45,ZOOM_MAX=1.6,ZOOM_STEP=1.25;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
   let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
@@ -1137,7 +1153,25 @@
     // V12: a slimmer HUD gives the canvas more height. Pin the width so cells stay the same size on screen
     // and only the view ahead grows, instead of silently zooming the maze in.
     if(LOOK==='new'&&portrait)zoom=Math.min(width/(S*PIN_CELLS_ACROSS),Math.max(width,height)/260);
+    baseZoom=zoom;zoom=baseZoom*userZoom;
     restrictCamera();}
+  // Player zoom: scales the camera only. Saved on this device.
+  function setUserZoom(v,save=true){
+    userZoom=clamp(Math.round(v*100)/100,ZOOM_MIN,ZOOM_MAX);
+    if(save)safeWrite('orbrinth-zoom-v12',String(userZoom));
+    zoom=baseZoom*userZoom;
+    camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();
+    $('zoomLevel').textContent=Math.round(userZoom*100)+'%';
+    $('zoomIn').disabled=userZoom>=ZOOM_MAX-.001;$('zoomOut').disabled=userZoom<=ZOOM_MIN+.001;
+  }
+  function setupZoom(){
+    const saved=parseFloat(safeRead('orbrinth-zoom-v12'));
+    if(saved>=ZOOM_MIN&&saved<=ZOOM_MAX)userZoom=saved;
+    $('zoomIn').addEventListener('click',()=>setUserZoom(userZoom*ZOOM_STEP));
+    $('zoomOut').addEventListener('click',()=>setUserZoom(userZoom/ZOOM_STEP));
+    $('zoomLevel').addEventListener('click',()=>setUserZoom(1));
+    $('zoomLevel').textContent=Math.round(userZoom*100)+'%';
+  }
   function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
     if(threeDActive()){
@@ -1152,6 +1186,7 @@
   function toast(msg){let el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2450)}
   function updateControls(){
     $('calibrate').disabled=(phase==='intro');
+    $('zoomCtl').classList.toggle('hidden',phase==='intro'||threeDActive()); // 3D level keeps its own camera
     updateSensorStatus();
   }
   function updateSensorStatus(){
@@ -1809,7 +1844,7 @@
     document.addEventListener('pointerdown',event=>{if(isOpen()&&!panel.contains(event.target)&&!menuBtn.contains(event.target))closeMenu()});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&isOpen())closeMenu()});
   }
-  setupLook();
+  setupLook();setupZoom();
   applyUIMode(uiMode);resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
