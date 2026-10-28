@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#fdfbff">
   <meta name="description" content="ORBRINTH — Tilt Into the Unknown. Gyro-only maze with 10 classic levels, 5 original special shapes and one floating 3D challenge, customizable colors and persistent player records.">
   <title>ORBRINTH V11.4 — Clean Logo | Maze Game</title>
+  <script>try{document.documentElement.dataset.look=localStorage.getItem('orbrinth-look-v12')==='classic'?'classic':'new'}catch(e){document.documentElement.dataset.look='new'}</script>
   <style>
     :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
     *{box-sizing:border-box}
@@ -317,6 +318,85 @@
     /* Home-only appearance switch. Override the later flex rule and keep it hidden in other menus. */
     #appearancePicker.hidden,
     #overlay:not(.home-intro) #appearancePicker{display:none!important}
+
+    /* ===== V12 look: quiet chrome, same maze =====
+       Every rule is scoped to html[data-look="new"], so the classic layout stays one tap away
+       (home screen, "Use the classic look"). Layout and paint only: input, physics, generation
+       and scoring are not touched. */
+    .cta.link{display:none;width:auto;margin:6px auto 0;padding:8px 12px;border:0;background:none;color:#5266a0;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px;justify-content:center}
+    .home-intro .cta.link{display:flex}
+    body[data-ui-mode="night"] .cta.link{color:#a9c1ff}
+    html[data-look="new"] body{font-family:"Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Roboto,sans-serif}
+    html[data-look="new"] .topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-height:calc(48px + env(safe-area-inset-top));padding:env(safe-area-inset-top) max(6px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left));background:#fff;border-bottom:0}
+    html[data-look="new"] .topbar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,#2879bd,#365a9e 27%,#713b83 54%,#a32f80 76%,#be2f70)}
+    html[data-look="new"] .brand{flex:0 0 auto;padding:0;border:0;background:none;gap:0;box-shadow:none}
+    html[data-look="new"] .brand>div:last-child{display:none}
+    html[data-look="new"] .brandmark{width:20px;height:20px}
+    html[data-look="new"] .hudright{flex:1 1 auto;min-width:0;width:auto;display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:18px;margin-left:8px}
+    html[data-look="new"] .hudright>.stat{flex:0 0 auto;min-width:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+    html[data-look="new"] .stat span{font-size:8.5px;letter-spacing:.17em;color:#7b86a3;font-weight:700}
+    html[data-look="new"] .stat strong{font:700 17px/1.15 ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;letter-spacing:0;color:#12193a;font-variant-numeric:tabular-nums}
+    html[data-look="new"] .tools{margin-left:auto;flex:0 0 auto;width:auto;gap:0;padding:0;border:0;background:none;box-shadow:none}
+    html[data-look="new"] .topbar .tools .tool{min-width:44px;width:44px;height:44px;flex:0 0 44px;border-radius:10px;font-size:16px;color:#26305a}
+    html[data-look="new"] .topbar .tools .tool:active,html[data-look="new"] .topbar .tools .tool[aria-expanded="true"]{background:#eceff8}
+    html[data-look="new"] .menu-tool .bars{display:block;width:18px;height:2px;margin:0 auto;background:currentColor;border-radius:1px;box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
+    html[data-look="new"] .hud-menu{position:absolute;z-index:4;top:calc(100% + 8px);right:max(8px,env(safe-area-inset-right));width:min(320px,calc(100vw - 16px));padding:12px;background:#fff;border:1px solid #dde1ee;border-radius:14px;box-shadow:0 20px 50px #151e4533}
+    html[data-look="new"] .hud-menu.hidden{display:none}
+    html[data-look="new"] .menu-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 10px;font-size:9.5px;font-weight:800;letter-spacing:.18em;color:#5d6888}
+    html[data-look="new"] .menu-head small{font-size:10px;letter-spacing:.02em;font-weight:600;color:#9a4f8b}
+    html[data-look="new"] .menu-info{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin-bottom:8px}
+    html[data-look="new"] .menu-info .profile-button{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;max-width:none;height:50px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb;color:#12193a;font-size:14px;font-weight:800;line-height:1.15}
+    html[data-look="new"] .menu-info .profile-button::before{content:"PLAYER";font-size:8.5px;letter-spacing:.17em;color:#7b86a3;font-weight:700;margin-bottom:3px}
+    html[data-look="new"] .menu-info .stat{display:flex;flex-direction:column;justify-content:center;min-width:0;height:50px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb}
+    html[data-look="new"] .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    html[data-look="new"] .menu-grid .tool{width:100%;min-width:0;height:48px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#fff;color:#12193a;font-size:13px;font-weight:700;letter-spacing:0;text-align:left}
+    html[data-look="new"] .menu-grid .tool:active{background:#eceff8}
+    html[data-look="new"] .menu-grid .tool:disabled{opacity:.45}
+    html[data-look="new"] .menu-grid #restart{grid-column:1/-1;margin-top:4px;text-align:center;color:#a3263f;border-color:#efc6cf;background:#fff8f9}
+    html[data-look="new"] .bottom-bar{min-height:34px;justify-content:space-between;gap:8px;padding:4px max(10px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 4px) max(12px,env(safe-area-inset-left));border-top:1px solid #ececf3}
+    html[data-look="new"] .status{flex:1 1 auto;min-width:0;padding:0;background:none;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;font-size:9px;letter-spacing:.07em;color:#5b6483}
+    html[data-look="new"] .sensor-details summary{min-height:28px;padding:5px 9px;border-radius:8px;font-size:9px;background:#fff}
+    html[data-look="new"] .dialog{border-radius:18px;box-shadow:0 24px 70px #1a244a30}
+    html[data-look="new"] .cta{border-radius:12px}
+    html[data-look="new"] .cta.primary{position:relative;min-height:58px;padding:0 18px 0 20px;border:0;background:#12193a;color:#fff;font-size:16px;letter-spacing:.01em;box-shadow:0 12px 28px #12193a38}
+    html[data-look="new"] .cta.primary::after{content:"";flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0 7%,#7cc8ff 8% 22%,#2f6fe4 48%,#b5307e 100%);box-shadow:0 0 0 3px #ffffff26}
+    html[data-look="new"] .cta.primary .arrow{display:none}
+    html[data-look="new"] .cta.secondary{min-height:48px;border:1.5px solid #cdd3e6;background:transparent;color:#26305a}
+    html[data-look="new"] .home-intro .dialog{display:flex;flex-direction:column;padding:22px 18px 12px}
+    html[data-look="new"] .home-intro .home-hero{order:1;margin-bottom:14px}
+    html[data-look="new"] .home-intro .copy{display:none}
+    html[data-look="new"] .home-intro .profile-entry{order:2;margin:0 0 12px;padding:0;border:0;background:none}
+    html[data-look="new"] .home-intro #tiltStart{order:3}
+    html[data-look="new"] .home-intro #preGameStyle{order:4}
+    html[data-look="new"] .home-intro .appearance-picker{order:5;margin:8px 0 0;padding:0;border:0;background:none}
+    html[data-look="new"] .home-intro .landscape-hint{order:6;margin:6px 0 0;color:#6b7694;font-weight:600}
+    html[data-look="new"] .home-intro #dialogFine{order:7;margin:8px 0 0;font-size:10.5px;color:#8a90a6}
+    html[data-look="new"] .home-intro #dialogFine.error{color:#b0214f;font-size:12px;font-weight:650}
+    html[data-look="new"] .home-intro #lookToggle{order:8}
+    html[data-look="new"] .profile-entry label{font-size:9.5px;letter-spacing:.17em;color:#7b86a3}
+    html[data-look="new"] .profile-entry input{height:50px;padding:0 14px;border:1.5px solid #c8cfe2;border-radius:10px;font-size:17px}
+    html[data-look="new"] .profile-entry input:focus{outline:0;border-color:#2879bd;box-shadow:0 0 0 3px #2879bd24}
+    html[data-look="new"] .appearance-options button{min-width:64px;padding:8px 10px}
+    html[data-look="new"] .level-tile,html[data-look="new"] .special-tile{border-radius:10px}
+    @media (orientation:landscape) and (max-height:560px){
+      html[data-look="new"] .home-intro .dialog{padding:10px 18px}
+      html[data-look="new"] .cta.primary{min-height:44px}
+      html[data-look="new"] .cta.secondary{min-height:38px}
+    }
+    html[data-look="new"] body[data-ui-mode="night"] .topbar,html[data-look="new"] body[data-ui-mode="night"] .bottom-bar{background:#0f1830;border-color:#243257}
+    html[data-look="new"] body[data-ui-mode="night"] .stat strong{color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .stat span{color:#8fa1c8}
+    html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool{color:#d6e5fa}
+    html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool:active,html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool[aria-expanded="true"]{background:#223256}
+    html[data-look="new"] body[data-ui-mode="night"] .hud-menu{background:#162240;border-color:#34436a}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-head{color:#9fb0d6}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-info .profile-button,html[data-look="new"] body[data-ui-mode="night"] .menu-info .stat{background:#1d2c4d;border-color:#34436a;color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-grid .tool{background:#1d2c4d;border-color:#34436a;color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-grid #restart{background:#3a1d2c;border-color:#6a2c45;color:#ffb1c3}
+    html[data-look="new"] body[data-ui-mode="night"] .status{color:#a9b8da}
+    html[data-look="new"] body[data-ui-mode="night"] .cta.primary{background:#e9eefc;color:#101a38;box-shadow:0 12px 28px #0007}
+    html[data-look="new"] body[data-ui-mode="night"] .cta.secondary{background:transparent;border-color:#46567e;color:#e5edff}
+    html[data-look="new"] body[data-ui-mode="night"] .profile-entry input{border-color:#586984}
   </style>
 </head>
 <body>
@@ -392,6 +472,7 @@
     <button class="cta secondary hidden" id="dialogHome" type="button">⌂ Home <span class="arrow" aria-hidden="true">↖</span></button>
     <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
+    <button class="cta link" id="lookToggle" type="button"></button>
   </section>
 </div>
 <div class="shade skin-shade hidden" id="skinOverlay" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
@@ -504,12 +585,15 @@
   const N=1,E=2,SO=4,WE=8;
   const DIRS=[[0,-1,N,SO],[1,0,E,WE],[0,1,SO,N],[-1,0,WE,E]];
   const $=id=>document.getElementById(id);
+  // V12: 'new' = quiet chrome, pinned camera, tinted shape mazes. 'classic' = the V11.4 layout, unchanged.
+  const LOOK=document.documentElement.dataset.look==='classic'?'classic':'new';
+  const PIN_CELLS_ACROSS=11.7; // portrait camera: the on-screen cell size the V11.4 HUD produced on common phones
   const canvas=$('game'),playfield=$('playfield'),ctx=canvas.getContext('2d',{alpha:false});
   const overlay=$('overlay'),statusEl=$('status'),picker=$('levelPicker'),specialPicker=$('specialPicker'),pickerTabs=$('pickerTabs');
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mazeTexture=document.createElement('canvas');mazeTexture.width=W;mazeTexture.height=H;
   const mctx=mazeTexture.getContext('2d',{alpha:false});
-  let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0;
+  let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0,outsideTint=null;
   let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null;
   // Independent floating platform topology, deliberately isolated from all existing five specials.
   const CRYSTAL_COUNT=4;
@@ -883,8 +967,19 @@
       }
     }
   }
+  // V12: outside the silhouette gets a quiet tint so the shape reads at play zoom. The inside keeps the
+  // theme floor, so wall-to-floor contrast where the ball actually rolls is exactly what it was.
+  function paintShapeField(){
+    outsideTint=mixColor(mazeTheme.floor,mazeTheme.wall1,.15);
+    mctx.fillStyle=outsideTint;mctx.fillRect(0,0,W,H);
+    mctx.fillStyle=mazeTheme.floor;
+    if(roundMode&&roundGeom){mctx.beginPath();mctx.arc(roundGeom.center,roundGeom.center,roundGeom.outer,0,Math.PI*2);mctx.fill()}
+    else if(activeMask){for(let y=0;y<R;y++)for(let x=0;x<C;x++)if(inMask(x,y))mctx.fillRect(x*S-.4,y*S-.4,S+.8,S+.8)}
+    else outsideTint=null;
+  }
   function paintSpecialMaze(){
     mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
+    outsideTint=null;if(LOOK==='new')paintShapeField();
     const gradient=mctx.createLinearGradient(0,H,W,0);
     gradient.addColorStop(0,mazeTheme.wall1);gradient.addColorStop(1,mazeTheme.wall2);
     mctx.lineWidth=T;mctx.lineJoin='round';mctx.lineCap='round';mctx.strokeStyle=gradient;
@@ -1003,6 +1098,7 @@
     if(width&&height)resize();
   }
   function paintMaze(){
+    outsideTint=null;
     mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
     if(mazeTheme.id==='classic'){const wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H)}
     const gradient=mctx.createLinearGradient(0,H,W,0);
@@ -1038,6 +1134,9 @@
     const portrait=height>width;
     zoom=Math.max(width/(S*(portrait?12.5:23)),height/(S*Math.min(R,portrait?21:15)));
     zoom=Math.min(zoom,Math.max(width,height)/260); // keep ball and walls navigable on small screens
+    // V12: a slimmer HUD gives the canvas more height. Pin the width so cells stay the same size on screen
+    // and only the view ahead grows, instead of silently zooming the maze in.
+    if(LOOK==='new'&&portrait)zoom=Math.min(width/(S*PIN_CELLS_ACROSS),Math.max(width,height)/260);
     restrictCamera();}
   function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
@@ -1168,7 +1267,8 @@
     },6500);
   }
   function launch(){phase='playing';$('preGameStyle').classList.add('hidden');overlay.classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');$('tiltStart').classList.remove('hidden');
-    resetBall();updateControls();tLast=performance.now()}
+    resetBall();updateControls();tLast=performance.now();
+    if(LOOK==='new'&&fogActive()&&!safeRead('orbrinth-fog-hint-v12')){safeWrite('orbrinth-fog-hint-v12','1');setTimeout(()=>{if(phase==='playing')toast('Fog level: only the corridors near the ball are visible')},2900)}}
   function showDialog(title,eyebrow,copy,primaryLabel,secondaryLabel){
     overlay.classList.remove('home-intro');$('appearancePicker').classList.add('hidden');
     $('profileEntry').classList.add('hidden');
@@ -1633,7 +1733,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
@@ -1665,6 +1765,51 @@
   window.addEventListener('resize',resize);
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(playfield);
   screen.orientation?.addEventListener?.('change',()=>{pendingCalibration=true;baseline=null;toast('Screen turned — recalibrating')});
+  // V12 chrome: the six toolbar buttons move into one menu. Elements keep their ids and listeners,
+  // so every action runs exactly the code it ran before. Only the pause button stays in the bar.
+  function setupLook(){
+    const toggle=$('lookToggle');
+    toggle.textContent=LOOK==='new'?'Use the classic look':'Try the new look';
+    toggle.addEventListener('click',()=>{safeWrite('orbrinth-look-v12',LOOK==='new'?'classic':'new');location.reload()});
+    if(LOOK!=='new')return;
+    const bar=document.querySelector('.topbar'),tools=document.querySelector('.tools');
+    $('pause').setAttribute('aria-label','Pause');
+    const menuBtn=document.createElement('button');
+    menuBtn.id='menuButton';menuBtn.className='tool menu-tool';menuBtn.type='button';
+    menuBtn.setAttribute('aria-label','Menu');menuBtn.setAttribute('aria-expanded','false');menuBtn.setAttribute('aria-controls','hudMenu');
+    menuBtn.innerHTML='<span class="bars" aria-hidden="true"></span>';tools.appendChild(menuBtn);
+    const panel=document.createElement('div');panel.id='hudMenu';panel.className='hud-menu hidden';
+    panel.setAttribute('role','group');panel.setAttribute('aria-label','Game menu');
+    panel.innerHTML='<div class="menu-head"><span>MENU</span><small id="menuNote"></small></div><div class="menu-info"></div><div class="menu-grid"></div>';
+    panel.querySelector('.menu-info').append($('profileButton'),document.querySelector('.record-stat'));
+    const grid=panel.querySelector('.menu-grid');
+    for(const [id,text] of [['homeButton','Home'],['levels','Mazes'],['ballButton','Style'],['calibrate','Recalibrate'],['restart','Restart level']]){
+      const b=$(id);b.textContent=text;grid.appendChild(b);
+    }
+    bar.appendChild(panel);
+    let menuHold=false;
+    const isOpen=()=>!panel.classList.contains('hidden');
+    function openMenu(){
+      if(phase==='playing'){phase='paused';vx=vy=0;smoothX=smoothY=0;menuHold=true}
+      $('menuNote').textContent=menuHold?'Clock paused':'';
+      panel.classList.remove('hidden');menuBtn.setAttribute('aria-expanded','true');
+    }
+    function closeMenu(resume=true){
+      panel.classList.add('hidden');menuBtn.setAttribute('aria-expanded','false');
+      if(resume&&menuHold&&phase==='paused'&&overlay.classList.contains('hidden')&&$('skinOverlay').classList.contains('hidden')&&!document.hidden){phase='playing';tLast=performance.now()}
+      menuHold=false;updateControls();
+    }
+    menuBtn.addEventListener('click',()=>isOpen()?closeMenu():openMenu());
+    // Choosing an item: hand it the same state the old toolbar button saw (still playing), then close.
+    panel.addEventListener('click',event=>{
+      if(!event.target.closest('button'))return;
+      if(menuHold&&phase==='paused'){phase='playing';tLast=performance.now()}
+      menuHold=false;setTimeout(()=>closeMenu(false),0);
+    },true);
+    document.addEventListener('pointerdown',event=>{if(isOpen()&&!panel.contains(event.target)&&!menuBtn.contains(event.target))closeMenu()});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&isOpen())closeMenu()});
+  }
+  setupLook();
   applyUIMode(uiMode);resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,

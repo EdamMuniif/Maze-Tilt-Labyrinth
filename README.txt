@@ -43,3 +43,9 @@ TEST STATUS
   message, and ball physics response.
 - PHYSICAL gyro behaviour on a real user's Android/iPhone has not been
   tested here; actual support depends on device/browser/security policy.
+
+V12 look (local, not pushed)
+- New default look: one 48 px HUD row (level, time, pause, menu), a single menu for Home / Mazes / Style / Recalibrate / Restart, a one-screen home page, and a quiet tint outside the shaped mazes so the silhouette reads at play zoom.
+- "Use the classic look" on the home screen switches back to the V11.4 layout (stored in localStorage key orbrinth-look-v12).
+- Maze generation, collision, physics, tilt handling, scoring and profiles are untouched. Verified: all 15 mazes solvable, identical wall data, identical tilt replay in both looks.
+- Not tested on a real phone yet.
