@@ -314,6 +314,9 @@
       .appearance-picker>span{font-size:9px}
     }
     @media(max-width:355px){.appearance-options button{min-width:60px;padding:8px 6px}}
+    /* Home-only appearance switch. Override the later flex rule and keep it hidden in other menus. */
+    #appearancePicker.hidden,
+    #overlay:not(.home-intro) #appearancePicker{display:none!important}
   </style>
 </head>
 <body>
