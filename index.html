@@ -400,6 +400,26 @@
     html[data-look="new"] body[data-ui-mode="night"] .cta.primary{background:#e9eefc;color:#101a38;box-shadow:0 12px 28px #0007}
     html[data-look="new"] body[data-ui-mode="night"] .cta.secondary{background:transparent;border-color:#46567e;color:#e5edff}
     html[data-look="new"] body[data-ui-mode="night"] .profile-entry input{border-color:#586984}
+    .cta.board-open{display:none}
+    .home-intro .cta.board-open:not(.hidden){display:flex}
+    html[data-look="new"] .home-intro #boardOpen{order:4}
+    .board-dialog{width:min(96vw,430px);max-height:min(92dvh,640px);padding:22px;overflow:auto}
+    .board-dialog h2{margin:12px 0 6px;color:#172145;font-size:25px;letter-spacing:-.045em}
+    .board-dialog p{font-size:12px;color:#65708b;line-height:1.45;margin:0 0 12px}
+    .board-list{list-style:none;margin:0 0 10px;padding:0}
+    .board-list li{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-bottom:1px solid #e6e9f3;color:#12193a;font-size:15px;font-weight:700}
+    .board-list li:first-child{border-top:1px solid #e6e9f3}
+    .board-list .rk{font:700 13px/1 ui-monospace,Menlo,Consolas,monospace;color:#7b86a3}
+    .board-list .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .board-list .pt{font:700 15px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+    .board-list li.me{background:#eef3ff;border-radius:8px;border-bottom-color:transparent}
+    .board-list li.me .nm::after{content:" · you";font-weight:600;color:#5266a0}
+    .board-list li.top1 .rk{color:#b8860b}
+    .board-status{min-height:18px;text-align:center}
+    body[data-ui-mode="night"] .board-dialog h2{color:#eaf2ff}
+    body[data-ui-mode="night"] .board-dialog p{color:#b3c3dd}
+    body[data-ui-mode="night"] .board-list li{color:#eaf2ff;border-color:#2c3a60}
+    body[data-ui-mode="night"] .board-list li.me{background:#1d2c4d}
     /* Zoom buttons: camera scale only. Physics, walls and scoring never read the zoom value. */
     .zoom-ctl{position:absolute;z-index:3;top:10px;right:max(10px,env(safe-area-inset-right));display:flex;flex-direction:column;border:1px solid #c9d0e4;border-radius:12px;background:#ffffffe8;box-shadow:0 6px 18px #1a244a26;overflow:hidden;-webkit-tap-highlight-color:transparent}
     .zoom-ctl.hidden{display:none}
@@ -489,8 +509,20 @@
     <button class="cta secondary" id="chooseLevel">Choose mazes <span class="arrow" aria-hidden="true">→</span></button>
     <button class="cta secondary hidden" id="dialogHome" type="button">⌂ Home <span class="arrow" aria-hidden="true">↖</span></button>
     <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
+    <button class="cta secondary board-open hidden" id="boardOpen" type="button">Leaderboard <span class="arrow" aria-hidden="true">★</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
     <button class="cta link" id="lookToggle" type="button"></button>
+  </section>
+</div>
+<div class="shade skin-shade hidden" id="boardOverlay" role="dialog" aria-modal="true" aria-labelledby="boardTitle">
+  <section class="dialog board-dialog">
+    <div class="eyebrow">LEADERBOARD</div>
+    <h2 id="boardTitle" tabindex="-1">Top players</h2>
+    <p>Everyone plays the same mazes. Ranked by total points, best score per maze.</p>
+    <ol class="board-list" id="boardList"></ol>
+    <p class="board-status" id="boardStatus" role="status"></p>
+    <button id="boardRefresh" class="skin-finish" type="button">Refresh</button>
+    <button id="boardClose" class="skin-back-home" type="button">Close</button>
   </section>
 </div>
 <div class="shade skin-shade hidden" id="skinOverlay" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
@@ -605,6 +637,12 @@
   const $=id=>document.getElementById(id);
   // V12: 'new' = quiet chrome, pinned camera, tinted shape mazes. 'classic' = the V11.4 layout, unchanged.
   const LOOK=document.documentElement.dataset.look==='classic'?'classic':'new';
+  // Everyone plays the same mazes, so scores are comparable. Change this number to start a new set of mazes.
+  const SHARED_SEED=424242;
+  // Online leaderboard (Firebase Firestore, REST). Fill in both values from LEADERBOARD_SETUP.md to switch it on.
+  // Without them the game works as before and the Leaderboard button stays hidden.
+  const BOARD={projectId:'',apiKey:'',collection:'players_s1'};
+  const BOARD_ON=!!(BOARD.projectId&&BOARD.apiKey);
   const PIN_CELLS_ACROSS=11.7; // portrait camera: the on-screen cell size the V11.4 HUD produced on common phones
   const canvas=$('game'),playfield=$('playfield'),ctx=canvas.getContext('2d',{alpha:false});
   const overlay=$('overlay'),statusEl=$('status'),picker=$('levelPicker'),specialPicker=$('specialPicker'),pickerTabs=$('pickerTabs');
@@ -776,7 +814,7 @@
   try{
     unlocked=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-unlocked'))||0,0,LEVELS.length-1);
     levelIndex=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-level'))||0,0,unlocked);
-    courseSeed=Number(localStorage.getItem('tilt-labyrinth-v4-seed'))||0;
+    courseSeed=SHARED_SEED;
     levelResults=JSON.parse(localStorage.getItem('tilt-labyrinth-v4-bests')||'{}');
     specialResults=JSON.parse(localStorage.getItem('tilt-labyrinth-v5-special-bests')||'{}');
     mode=localStorage.getItem('tilt-labyrinth-v5-mode')==='special'?'special':'classic';
@@ -1330,7 +1368,7 @@
       else specialResults[specialIndex]=Number(elapsed.toFixed(2));}
     const isFinal=currentNumber()===currentTotal();
     if(mode==='classic'&&!isFinal)unlocked=Math.max(unlocked,levelIndex+1);
-    saveProgress();
+    saveProgress();boardRecord(scoreKey.replace('classic:','c').replace('special:','s'),earned);
     showDialog(isFinal?'CHALLENGE <span class="gradient">CLEARED.</span>':'MAZE <span class="gradient">COMPLETE.</span>',
       `${currentName().toUpperCase()} COMPLETE`,
       `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${threeDActive()?`${challengeFalls} falls and all four crystals`: `${bumpCount} wall contacts`}. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
@@ -1803,6 +1841,74 @@
   window.addEventListener('resize',resize);
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(playfield);
   screen.orientation?.addEventListener?.('change',()=>{pendingCalibration=true;baseline=null;toast('Screen turned — recalibrating')});
+  // ---- Leaderboard (V12) ----
+  // One Firestore document per player per device: players_s1/<deviceId>_<profile>. Points come from the same
+  // scoreLevel() as before. Scores never leave the device unless BOARD is configured.
+  const BOARD_STORE='orbrinth-board-v1';
+  const boardData=(()=>{try{const d=JSON.parse(safeRead(BOARD_STORE)||'{}');return{device:String(d.device||''),players:d.players&&typeof d.players==='object'?d.players:{}}}catch(_){return{device:'',players:{}}}})();
+  if(!/^[0-9a-f]{16}$/.test(boardData.device)){
+    const a=new Uint8Array(8);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(a);else for(let i=0;i<8;i++)a[i]=Math.random()*256;
+    boardData.device=[...a].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const boardSave=()=>safeWrite(BOARD_STORE,JSON.stringify(boardData));
+  const boardApi=path=>`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(BOARD.projectId)}/databases/(default)/documents${path}?key=${encodeURIComponent(BOARD.apiKey)}`;
+  const boardDocId=key=>`${boardData.device}_${String(key).replace(/[^a-z0-9]/gi,'').slice(0,24)||'p'}`;
+  const boardMine=()=>boardData.players[activePlayerKey]||(boardData.players[activePlayerKey]={name:'',scores:{},synced:-1});
+  const boardTotal=m=>Object.values(m.scores).reduce((a,n)=>a+(Number(n)||0),0);
+  function boardFetch(url,options){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
+    return fetch(url,{...options,signal:ctl.signal}).finally(()=>clearTimeout(timer));
+  }
+  // Sends every local player whose total changed since the last successful upload (also catches offline wins).
+  async function boardSync(){
+    if(!BOARD_ON)return;
+    for(const [key,mine] of Object.entries(boardData.players)){
+      const total=boardTotal(mine);
+      if(total>0&&total!==mine.synced)await boardSend(key,mine,total);
+    }
+  }
+  async function boardSend(key,mine,total){
+    const fields={name:{stringValue:String(mine.name||'Player').slice(0,16)},total:{integerValue:String(total)},
+      scores:{mapValue:{fields:Object.fromEntries(Object.entries(mine.scores).map(([k,v])=>[k,{integerValue:String(Math.round(v))}]))}},
+      updatedAt:{timestampValue:new Date().toISOString()}};
+    try{
+      const res=await boardFetch(boardApi(`/${BOARD.collection}/${boardDocId(key)}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});
+      if(res.ok){mine.synced=total;boardSave()}
+    }catch(_){/* Offline: it syncs on the next win or when the board is opened. */}
+  }
+  function boardRecord(key,earned){
+    if(!BOARD_ON||!playerProfile)return;
+    const mine=boardMine();mine.name=playerProfile.name;mine.scores[key]=Math.max(Number(mine.scores[key])||0,earned);boardSave();boardSync();
+  }
+  async function boardLoad(){
+    const list=$('boardList'),status=$('boardStatus');
+    list.textContent='';status.textContent='Loading…';
+    await boardSync();
+    try{
+      const res=await boardFetch(boardApi(':runQuery'),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({structuredQuery:{from:[{collectionId:BOARD.collection}],orderBy:[{field:{fieldPath:'total'},direction:'DESCENDING'}],limit:25}})});
+      if(!res.ok)throw new Error('http '+res.status);
+      const rows=(await res.json()).filter(r=>r.document).map(r=>({id:r.document.name.split('/').pop(),name:r.document.fields?.name?.stringValue||'Player',total:Number(r.document.fields?.total?.integerValue)||0}));
+      if(!rows.length){status.textContent='No scores yet. Finish a maze to be first.';return}
+      rows.forEach((r,i)=>{
+        const li=document.createElement('li');if(r.id.startsWith(boardData.device+'_'))li.className='me';if(i===0)li.classList.add('top1');
+        const rk=document.createElement('span'),nm=document.createElement('span'),pt=document.createElement('span');
+        rk.className='rk';rk.textContent=String(i+1);nm.className='nm';nm.textContent=r.name;pt.className='pt';pt.textContent=r.total.toLocaleString('en-US');
+        li.append(rk,nm,pt);list.appendChild(li);
+      });
+      status.textContent='';
+    }catch(_){status.textContent='Can\u2019t reach the leaderboard. Check your connection and tap Refresh.'}
+  }
+  function setupBoard(){
+    if(!BOARD_ON)return;
+    $('boardOpen').classList.remove('hidden');
+    const note=document.querySelector('.profile-entry small');
+    if(note)note.textContent='Use a nickname, not your full name. Your name and points are shown on the leaderboard.';
+    $('boardOpen').addEventListener('click',()=>{$('boardOverlay').classList.remove('hidden');$('boardTitle').focus();boardLoad()});
+    $('boardRefresh').addEventListener('click',boardLoad);
+    $('boardClose').addEventListener('click',()=>$('boardOverlay').classList.add('hidden'));
+    boardSync();
+  }
   // V12 chrome: the six toolbar buttons move into one menu. Elements keep their ids and listeners,
   // so every action runs exactly the code it ran before. Only the pause button stays in the bar.
   function setupLook(){
@@ -1847,7 +1953,7 @@
     document.addEventListener('pointerdown',event=>{if(isOpen()&&!panel.contains(event.target)&&!menuBtn.contains(event.target))closeMenu()});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&isOpen())closeMenu()});
   }
-  setupLook();setupZoom();
+  setupLook();setupZoom();setupBoard();
   applyUIMode(uiMode);resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
