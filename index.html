@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#fdfbff">
-  <meta name="description" content="Landscape-first gyro maze game with named players, personal records, ten classic and five special levels.">
-  <title>Tilt Labyrinth V6 | Landscape & Player Records</title>
+  <meta name="description" content="Gyro-only maze with four selectable ball speeds, custom maze themes, ball skins, player profiles and 15 levels.">
+  <title>Tilt Labyrinth V9.1 | Custom Themes, Balls & Speed</title>
   <style>
     :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
     *{box-sizing:border-box}
@@ -112,6 +112,25 @@
       .hudright{flex-wrap:wrap}.profile-button{max-width:150px;flex:0 0 auto}
       .stat.record-stat{min-width:65px}.stat.record-stat strong{font-size:13px}
     }
+    /* V7 player-selectable ball colors and materials. Keeps HUD outside canvas. */
+    .ball-tool{font-weight:900;color:#6243a2}
+    .skin-shade{z-index:9}
+    .skin-dialog{width:min(96vw,465px);max-height:min(92dvh,650px);padding:22px;overflow:auto}
+    .skin-dialog h2{margin:12px 0 6px;color:#172145;font-size:25px;letter-spacing:-.045em}
+    .skin-dialog p{font-size:12px;color:#65708b;line-height:1.45;margin:0 0 12px}
+    .skin-preview{display:flex;align-items:center;justify-content:center;min-height:110px;margin:12px 0;border:1px solid #e6e3f0;background:radial-gradient(circle at 50% 50%,#fff,#f2f4fc);border-radius:13px}
+    #ballPreview{display:block;width:160px;height:110px}
+    .skin-label{display:block;color:#4a5577;font-size:11px;font-weight:850;letter-spacing:.1em;margin:12px 0 8px}
+    .skin-colors{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+    .skin-color{min-width:0;min-height:47px;border:2px solid #e1deee;border-radius:9px;background:#f8f7fd;display:flex;align-items:center;justify-content:center}
+    .skin-color[aria-pressed="true"]{outline:2px solid #6350c3;outline-offset:1px;background:#eeebfb}
+    .skin-swatch{width:28px;height:28px;border-radius:50%;box-shadow:inset -4px -4px 8px #1113,inset 3px 3px 6px #fff7}
+    .skin-styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .skin-style{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 3px;border:2px solid #e3e1ee;background:#faf9fe;border-radius:11px;color:#414f74;font-weight:850;font-size:11px}
+    .skin-style[aria-pressed="true"]{background:#eeeafb;border-color:#7555c1;color:#392c74}
+    .skin-style canvas{display:block;width:57px;height:57px}
+    .skin-finish{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:11px;background:linear-gradient(105deg,#236cc9,#7643aa 70%,#c52e80);color:white;font-weight:850}
+    @media (orientation:landscape) and (max-height:480px){.skin-dialog{width:min(93vw,530px);padding:12px 17px;max-height:96dvh}.skin-dialog h2{font-size:19px;margin:4px 0}.skin-dialog p{font-size:10px;margin-bottom:4px}.skin-preview{display:none}#ballPreview{height:66px;width:112px}.skin-label{margin:6px 0 4px}.skin-style canvas{width:40px;height:40px}.skin-style{font-size:9px;padding:3px}.skin-color{min-height:33px}.skin-swatch{height:22px;width:22px}.skin-finish{margin-top:8px;padding:7px}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
     /* V3: The HUD and sensor status belong to document layout, not over the maze. */
     body{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0}
@@ -161,6 +180,48 @@
       .tools{flex:1 1 140px;justify-content:space-evenly;margin-left:0}
       .tools .tool{min-width:32px;flex:1 1 auto}
     }
+
+    /* V9 maze, ball and speed editor, usable before starting and during the game. */
+    .theme-preview{margin:7px 0 8px;min-height:95px;overflow:hidden;padding:0;background:#f5f6fb}
+    #themePreview{display:block;width:100%;height:92px;max-width:100%}
+    .theme-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .theme-preset{display:flex;align-items:center;gap:6px;min-width:0;padding:5px 6px;border:2px solid #e3dfef;border-radius:9px;background:#faf9fd;color:#3d4c70;font-size:10px;font-weight:800;min-height:37px}
+    .theme-preset[aria-pressed="true"]{border-color:#6652b7;background:#edeafd}
+    .theme-preset-sample{width:30px;height:24px;border-radius:5px;flex:0 0 30px;border:1px solid #6d748d44}
+    .theme-custom{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0 1px}
+    .theme-custom.hidden{display:none}
+    .theme-custom label{border:1px solid #e4e0ed;border-radius:7px;padding:5px 4px;display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0;font-size:10px;color:#4a5577;font-weight:750}
+    .theme-custom input[type="color"]{width:25px;height:26px;min-width:25px;flex-shrink:0;border:0;background:none;padding:0;cursor:pointer}
+    .ball-custom-label{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:7px;padding:5px 9px;border:1px solid #e4e0ed;border-radius:8px;color:#4a5577;font-size:10px;font-weight:800}
+    .ball-custom-label input{width:37px;height:27px;cursor:pointer;padding:0;border:0;background:transparent}
+    .skin-finish{position:sticky;bottom:-1px;z-index:1;box-shadow:0 -5px 16px #fff9}
+    @media(orientation:landscape) and (max-height:510px){.theme-preview{display:none}.theme-presets{grid-template-columns:repeat(6,minmax(0,1fr))}.theme-preset{font-size:8px;flex-direction:column;gap:2px;padding:3px;min-height:46px}.theme-preset-sample{height:13px;width:29px;flex-basis:13px}.theme-custom{margin:3px 0}.skin-dialog{padding:11px 16px;max-height:96dvh}.skin-dialog p{margin:2px 0}.skin-label{margin:6px 0 4px}.skin-colors{gap:4px}.skin-styles{gap:4px}.skin-style canvas{width:39px;height:39px}.skin-style{padding:3px;font-size:9px}.ball-custom-label{margin-top:4px}.skin-finish{margin-top:6px}}
+    @media(max-width:390px){.theme-presets{grid-template-columns:repeat(2,minmax(0,1fr))}.theme-custom{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    /* V9: four accessible per-player tilt speed presets. */
+    .speed-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+    .speed-option{min-width:0;min-height:62px;border:2px solid #e3dfef;border-radius:11px;background:#faf9fe;color:#424e73;padding:8px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+    .speed-option strong{font-size:12px;font-weight:850;line-height:1.1}
+    .speed-option small{font-size:10px;color:#687598;font-weight:700}
+    .speed-option[aria-pressed="true"]{background:#eeebfc;border-color:#6d53bc;color:#40348b;box-shadow:inset 0 0 0 1px #a399e1}
+    .speed-note{font-size:10px!important;margin:6px 0 1px!important;color:#616c8c!important;line-height:1.35!important}
+    @media(max-width:375px){.speed-options{gap:4px}.speed-option{padding:7px 2px;min-height:54px}.speed-option strong{font-size:10px}}
+    @media(orientation:landscape) and (max-height:510px){.speed-option{min-height:37px;padding:4px 2px;gap:1px}.speed-option strong{font-size:10px}.speed-option small{font-size:8px}.speed-note{margin:3px 0 0!important}}
+    /* Audit update: transparent raw phone sensor readings, without blocking play. */
+    .bottom-bar{position:relative}
+    .sensor-details{position:relative;flex:0 0 auto;font-size:10px;z-index:6}
+    .sensor-details summary{list-style:none;cursor:pointer;user-select:none;border:1px solid #d5dbee;background:#f8f9fd;border-radius:9px;padding:8px 10px;color:#33446d;font-size:10px;font-weight:850;white-space:nowrap;min-height:32px;display:flex;align-items:center}
+    .sensor-details summary::-webkit-details-marker{display:none}
+    .sensor-details summary:focus-visible{outline:3px solid #287bdb;outline-offset:2px}
+    .sensor-details[open] summary{background:#e8ecfb}
+    .sensor-panel{position:absolute;z-index:9;bottom:calc(100% + 13px);right:0;width:min(350px,calc(100vw - 25px));box-sizing:border-box;background:#fff;border:1px solid #d7deef;border-radius:15px;box-shadow:0 15px 40px #101a3640;padding:13px;color:#273452;line-height:1.5;text-align:left;font-size:12px}
+    .sensor-panel strong{display:block;font-size:12px;margin-bottom:7px}
+    .sensor-panel dl{display:grid;grid-template-columns:minmax(100px,1fr) minmax(120px,1.3fr);gap:6px 9px;margin:0}
+    .sensor-panel dt{font-weight:750;color:#69728b}.sensor-panel dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+    .sensor-panel p{margin:9px 0 0;color:#727a90;font-size:10px;line-height:1.5}
+    @media(max-width:670px){.bottom-bar{gap:7px}.sensor-details summary{font-size:9px;padding:7px}}
+    @media(orientation:landscape) and (max-height:560px){.sensor-details summary{min-height:34px;padding:5px 7px}.tools .tool{height:36px;min-width:36px}.profile-button{height:36px}}
+    @media(orientation:landscape) and (max-width:700px){.topbar .brand{display:none}.topbar .hudright{width:100%;justify-content:space-between}.topbar .tools .tool{min-width:38px}}
+    @media(orientation:portrait) and (max-width:670px){.topbar .tools{width:100%;flex:1 1 100%}.topbar .tools .tool{min-width:44px;height:40px}}
   </style>
 </head>
 <body>
@@ -174,6 +235,7 @@
     <div class="tools">
       <button id="calibrate" class="tool" title="Recalibrate phone tilt" aria-label="Calibrate tilt">CAL</button>
       <button id="levels" class="tool" title="Choose an unlocked level" aria-label="Choose level">LVL</button>
+      <button id="ballButton" class="tool ball-tool" title="Choose maze theme and ball" aria-label="Customize theme and ball">STYLE</button>
       <button id="pause" class="tool" title="Pause game" aria-label="Pause game">Ⅱ</button>
       <button id="restart" class="tool" title="Restart this maze" aria-label="Restart current level">↻</button>
     </div>
@@ -183,14 +245,28 @@
   <canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
 </main>
 <footer class="bottom-bar" id="bottomBar">
-  <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> GYRO ONLY · BLUE START → PINK FINISH</div>
+  <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
+  <details class="sensor-details" id="sensorDetails"><summary>RAW DATA</summary>
+    <div class="sensor-panel" role="group" aria-label="Live device sensor values">
+      <strong>Phone sensor diagnostics</strong>
+      <dl>
+        <dt>Source</dt><dd id="diagSource">Waiting</dd>
+        <dt>Screen angle</dt><dd id="diagScreen">—</dd>
+        <dt>Orientation α / β / γ</dt><dd id="diagOrientation">—</dd>
+        <dt>Gyro rate α / β / γ</dt><dd id="diagRotation">Not provided</dd>
+        <dt>Gravity x / y / z</dt><dd id="diagGravity">Not provided</dd>
+        <dt>Steering X / Y</dt><dd id="diagSteering">—</dd>
+      </dl>
+      <p>Angles are browser-provided values in degrees; angular rate is in °/s, gravity in m/s². Steering percentages are calibrated and filtered, not raw sensor readings. The gravity fallback may operate without a gyroscope.</p>
+    </div>
+  </details>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </footer>
 <div class="shade" id="overlay">
   <section class="dialog" aria-labelledby="dialogTitle">
     <div class="eyebrow" id="dialogEyebrow">THE MAZE AWAITS</div>
     <h1 id="dialogTitle">TILT<br><span class="gradient">LABYRINTH.</span></h1>
-    <p class="copy" id="dialogCopy">Ten classic labyrinths plus five special-shaped mazes: Circle, Butterfly, Halloween Cat, Star, and Carrot. Gyroscope controls only. Every maze has a verified path.</p>
+    <p class="copy" id="dialogCopy">Customize your maze, ball and speed before playing. Ten Classic and five Special mazes use phone gyro only, each with a verified route.</p>
     <p class="landscape-hint">Rotate your phone to landscape for the best view.</p>
     <div class="chips" id="dialogChips"><span class="chip">10 CLASSIC</span><span class="chip">5 SPECIAL</span><span class="chip">GYRO ONLY</span></div>
     <div class="profile-entry" id="profileEntry">
@@ -205,7 +281,33 @@
     <div class="special-picker hidden" id="specialPicker" aria-label="Special-shaped mazes"></div>
     <button class="cta primary" id="tiltStart">Enable tilt & play <span class="arrow" aria-hidden="true">↗</span></button>
     <button class="cta secondary" id="chooseLevel">Choose mazes <span class="arrow" aria-hidden="true">→</span></button>
+    <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
+  </section>
+</div>
+<div class="shade skin-shade hidden" id="skinOverlay" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
+  <section class="dialog skin-dialog">
+    <div class="eyebrow">PLAYER CUSTOMIZATION</div>
+    <h2 id="skinTitle" tabindex="-1">Customize your game</h2>
+    <p>Pick the maze colors, choose your marble and set one of four ball speeds. Gyro-only steering and wall collisions remain enabled.</p>
+    <div class="skin-preview theme-preview"><canvas id="themePreview" width="420" height="116" aria-label="Maze and ball live preview"></canvas></div>
+    <span class="skin-label">MAZE THEME</span>
+    <div id="themePresets" class="theme-presets" role="group" aria-label="Maze themes"></div>
+    <div id="customTheme" class="theme-custom hidden">
+      <label>Floor <input id="themeFloor" type="color" aria-label="Maze floor color"></label>
+      <label>Wall 1 <input id="themeWall1" type="color" aria-label="Maze first wall color"></label>
+      <label>Wall 2 <input id="themeWall2" type="color" aria-label="Maze second wall color"></label>
+      <label>Finish <input id="themeFinish" type="color" aria-label="Maze finish color"></label>
+    </div>
+    <span class="skin-label">COLOR</span>
+    <div id="skinColors" class="skin-colors" role="group" aria-label="Ball colors"></div>
+    <label class="ball-custom-label">Custom ball color <input id="ballCustomColor" type="color" value="#3b9ee7" aria-label="Custom ball color"></label>
+    <span class="skin-label">BALL TYPE</span>
+    <div id="skinStyles" class="skin-styles" role="group" aria-label="Ball types"></div>
+    <span class="skin-label">BALL SPEED</span>
+    <div id="speedOptions" class="speed-options" role="group" aria-label="Ball movement speed"></div>
+    <p class="speed-note">Controls how fast the ball accelerates and rolls. Changes are saved automatically for this player on this device.</p>
+    <button id="skinDone" class="skin-finish" type="button">Done — changes saved automatically</button>
   </section>
 </div>
 <script>
@@ -244,14 +346,68 @@
   function resetWallMap(){wallSegments=[];wallBuckets=new Map()}
   const cellPos=i=>[i%C*S+S/2,Math.floor(i/C)*S+S/2];
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
-  let phase='intro',control='tilt',elapsed=0,bumpCount=0,lastBump=-1,best=null;
+  let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
   let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,camX=0,camY=0;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
   let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
+  // Read-only copy of original browser event values; never substituted with game steering.
+  let rawOrientation=null,rawRotation=null,rawGravity=null;
   let smoothX=0,smoothY=0;
   let toastTimer,missingSensorTimer;
   let levelIndex=0,unlocked=0,courseSeed=0,levelResults={},mode='classic',specialIndex=0,specialResults={};
+  const BALL_COLORS=[
+    {id:'blue',name:'Ocean Blue',light:'#e2faff',mid:'#3b9ee7',dark:'#163c8c',glow:'#328fff'},
+    {id:'red',name:'Ruby Red',light:'#ffe7ee',mid:'#ef4766',dark:'#821431',glow:'#fa486c'},
+    {id:'green',name:'Emerald',light:'#e2ffeb',mid:'#28b889',dark:'#075d52',glow:'#20ca9a'},
+    {id:'gold',name:'Gold',light:'#fff9c3',mid:'#eab63b',dark:'#9f5714',glow:'#f5be36'},
+    {id:'purple',name:'Amethyst',light:'#f3e4ff',mid:'#9a67d8',dark:'#4a237a',glow:'#a567f5'},
+    {id:'orange',name:'Orange',light:'#ffe9c7',mid:'#ef842b',dark:'#994317',glow:'#f59537'}
+  ];
+  const BALL_STYLES=[
+    {id:'glass',name:'Glass'},{id:'metal',name:'Metal'},{id:'neon',name:'Neon'},
+    {id:'soccer',name:'Football'},{id:'basketball',name:'Basketball'},{id:'eight',name:'8-Ball'}
+  ];
+  const hexColor=(v,fallback)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v)?v.toLowerCase():fallback;
+  const toRGB=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+  const mixColor=(a,b,t)=>{const x=toRGB(a),y=toRGB(b);return '#'+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,'0')).join('')};
+  const rgba=(hex,alpha)=>`rgba(${toRGB(hex).join(',')},${alpha})`;
+  const THEMES=[
+    {id:'classic',name:'Original',floor:'#fffefe',wall1:'#2879bd',wall2:'#be2f70',finish:'#e64caa'},
+    {id:'midnight',name:'Midnight',floor:'#0c142b',wall1:'#48e5ff',wall2:'#b86bff',finish:'#ff78ae'},
+    {id:'ocean',name:'Ocean',floor:'#e6f8ff',wall1:'#164c91',wall2:'#12a6b3',finish:'#d84f8f'},
+    {id:'forest',name:'Forest',floor:'#f0f8ef',wall1:'#236b4f',wall2:'#79a53f',finish:'#d16d38'},
+    {id:'sunset',name:'Sunset',floor:'#fff2df',wall1:'#ff873e',wall2:'#b43683',finish:'#7e38bb'},
+    {id:'mono',name:'Mono',floor:'#f8f8f8',wall1:'#282e38',wall2:'#667081',finish:'#ba406b'},
+    {id:'custom',name:'Custom',floor:'#ffffff',wall1:'#2563eb',wall2:'#a21caf',finish:'#e7358b'}
+  ];
+  const DEFAULT_THEME={id:'classic',floor:THEMES[0].floor,wall1:THEMES[0].wall1,wall2:THEMES[0].wall2,finish:THEMES[0].finish};
+  function normalizeTheme(value){
+    const preset=THEMES.find(t=>t.id===value?.id)||THEMES[0];
+    const stored=preset.id==='custom'?(value||{}):preset;
+    return {id:preset.id,floor:hexColor(stored.floor,preset.floor),wall1:hexColor(stored.wall1,preset.wall1),wall2:hexColor(stored.wall2,preset.wall2),finish:hexColor(stored.finish,preset.finish)};
+  }
+  const SPEED_PRESETS=[
+    {id:'slow',name:'Slow',factor:.65,label:'0.65×'},
+    {id:'normal',name:'Normal',factor:1,label:'1.00×'},
+    {id:'fast',name:'Fast',factor:1.40,label:'1.40×'},
+    {id:'extreme',name:'Extreme',factor:1.85,label:'1.85×'}
+  ];
+  const normalizeSpeed=value=>SPEED_PRESETS.some(p=>p.id===value)?value:'normal';
+  let speedChoice='normal';
+  const currentSpeed=()=>SPEED_PRESETS.find(p=>p.id===speedChoice)||SPEED_PRESETS[1];
+  const DEFAULT_BALL={color:'blue',style:'glass',customColor:'#3b9ee7'};
+  function normalizeBall(value){return {
+    color:value?.color==='custom'||BALL_COLORS.some(c=>c.id===value?.color)?value.color:DEFAULT_BALL.color,
+    style:BALL_STYLES.some(c=>c.id===value?.style)?value.style:DEFAULT_BALL.style,
+    customColor:hexColor(value?.customColor,DEFAULT_BALL.customColor)
+  }}
+  const getBallPalette=choice=>choice.color==='custom'
+    ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
+    :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0];
+  let ballChoice={...DEFAULT_BALL},mazeTheme={...DEFAULT_THEME},skinReturnPlaying=false,skinReturnToIntro=false;
+  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')paintMaze();else paintSpecialMaze()}}
+
   const PROFILE_STORE='tilt-labyrinth-v6-profiles';
   const ACTIVE_STORE='tilt-labyrinth-v6-active';
   let profiles=Object.create(null),activePlayerKey='',playerProfile=null,legacyProgress=null;
@@ -259,7 +415,7 @@
   const safeWrite=(key,value)=>{try{localStorage.setItem(key,value)}catch(_){/* volatile fallback */}};
   function cleanName(name){return String(name||'').trim().replace(/\s+/g,' ').slice(0,18)}
   const profileKey=name=>cleanName(name).toLocaleLowerCase('en-US');
-  function freshProfile(name){return {name,unlocked:0,level:0,mode:'classic',specialIndex:0,classicBest:{},specialBest:{},scores:{},highScore:0,lastPlayed:Date.now()}}
+  function freshProfile(name){return {name,unlocked:0,level:0,mode:'classic',specialIndex:0,classicBest:{},specialBest:{},scores:{},highScore:0,lastPlayed:Date.now(),ball:{...DEFAULT_BALL},theme:{...DEFAULT_THEME},speed:'normal'}}
   function normalizeProfile(data,name){
     const p=freshProfile(cleanName(name));if(!data||typeof data!=='object')return p;
     p.unlocked=clamp(Math.floor(Number(data.unlocked)||0),0,LEVELS.length-1);
@@ -270,11 +426,12 @@
     p.classicBest=records(data.classicBest);p.specialBest=records(data.specialBest);
     p.scores=Object.fromEntries(Object.entries(records(data.scores)).filter(([k,v])=>/^(classic|special):\d+$/.test(k)&&Number.isFinite(v)&&v>0));
     p.highScore=Math.max(0,...Object.values(p.scores).map(Number));
-    p.lastPlayed=Number.isFinite(data.lastPlayed)?data.lastPlayed:Date.now();return p;
+    p.ball=normalizeBall(data.ball);p.theme=normalizeTheme(data.theme);p.speed=normalizeSpeed(data.speed);p.lastPlayed=Number.isFinite(data.lastPlayed)?data.lastPlayed:Date.now();return p;
   }
   function saveProfiles(){if(!playerProfile)return;
     playerProfile.unlocked=unlocked;playerProfile.level=levelIndex;playerProfile.mode=mode;playerProfile.specialIndex=specialIndex;
     playerProfile.classicBest={...levelResults};playerProfile.specialBest={...specialResults};
+    playerProfile.ball={...ballChoice};playerProfile.theme={...mazeTheme};playerProfile.speed=speedChoice;
     playerProfile.lastPlayed=Date.now();profiles[activePlayerKey]=playerProfile;
     safeWrite(PROFILE_STORE,JSON.stringify(profiles));safeWrite(ACTIVE_STORE,activePlayerKey);
     renderPlayerStats();
@@ -304,6 +461,7 @@
       if(!Object.keys(profiles).length&&legacyProgress){Object.assign(p,legacyProgress);p.name=name;}
     }
     playerProfile=normalizeProfile(p,p.name||name);profiles[key]=playerProfile;activePlayerKey=key;
+    ballChoice=normalizeBall(playerProfile.ball);setTheme(playerProfile.theme);speedChoice=normalizeSpeed(playerProfile.speed);
     unlocked=playerProfile.unlocked;levelIndex=playerProfile.level;mode=playerProfile.mode;specialIndex=playerProfile.specialIndex;
     levelResults={...playerProfile.classicBest};specialResults={...playerProfile.specialBest};
     loadLevel(mode==='classic'?levelIndex:specialIndex,mode);saveProfiles();
@@ -312,6 +470,7 @@
   }
   function scoreLevel(time,hits){
     const base=mode==='classic'?500+(levelIndex+1)*230:950+(specialIndex+1)*280;
+    // Normalize the time bonus to the selected movement speed for fairer local scoring.
     const timeBonus=Math.round(3200/(1+time/55));
     return Math.max(100,Math.round(base+pathLength*3+timeBonus-Math.min(hits,150)*4));
   }
@@ -529,9 +688,9 @@
     }
   }
   function paintSpecialMaze(){
-    mctx.fillStyle='#fffefe';mctx.fillRect(0,0,W,H);
+    mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
     const gradient=mctx.createLinearGradient(0,H,W,0);
-    gradient.addColorStop(0,'#2879bd');gradient.addColorStop(.35,'#3e549e');gradient.addColorStop(.65,'#923986');gradient.addColorStop(1,'#c42a78');
+    gradient.addColorStop(0,mazeTheme.wall1);gradient.addColorStop(1,mazeTheme.wall2);
     mctx.lineWidth=T;mctx.lineJoin='round';mctx.lineCap='round';mctx.strokeStyle=gradient;
     mctx.beginPath();for(const [x1,y1,x2,y2] of wallSegments){mctx.moveTo(x1,y1);mctx.lineTo(x2,y2)}mctx.stroke();
   }
@@ -588,10 +747,12 @@
     if(width&&height)resize();
   }
   function paintMaze(){
-    mctx.fillStyle='#fffefe';mctx.fillRect(0,0,W,H);
-    let wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H);
+    mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
+    if(mazeTheme.id==='classic'){const wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H)}
     const gradient=mctx.createLinearGradient(0,H,W,0);
-    gradient.addColorStop(0,'#2879bd');gradient.addColorStop(.27,'#365a9e');gradient.addColorStop(.54,'#713b83');gradient.addColorStop(.76,'#a32f80');gradient.addColorStop(1,'#be2f70');
+    if(mazeTheme.id==='classic'){
+      gradient.addColorStop(0,'#2879bd');gradient.addColorStop(.27,'#365a9e');gradient.addColorStop(.54,'#713b83');gradient.addColorStop(.76,'#a32f80');gradient.addColorStop(1,'#be2f70');
+    }else{gradient.addColorStop(0,mazeTheme.wall1);gradient.addColorStop(1,mazeTheme.wall2)}
     mctx.lineWidth=T;mctx.lineCap='square';mctx.lineJoin='miter';mctx.strokeStyle=gradient;
     mctx.beginPath();
     for(let r=0;r<R;r++)for(let c=0;c<C;c++){
@@ -608,7 +769,7 @@
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
     }else{px=S/2;py=H-S/2;}
-    vx=vy=0;elapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
+    vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
     updateClock();camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();}
   function resize(){width=playfield.clientWidth;height=playfield.clientHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
@@ -633,11 +794,23 @@
     else if(phase==='playing'){
       if(!hasSensor){message='WAITING FOR PHONE TILT DATA…';level='waiting'}
       else if(performance.now()-sensorTime>2500){message='SENSOR STOPPED · TAP CAL OR RESUME';level='error'}
-      else{const [x,y]=currentTilt();message=`TILT LIVE (${sensorSource}) · X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`}
+      else{const [x,y]=currentTilt();message=`TILT LIVE (${sensorSource}) · STEERING X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`}
     }
     statusEl.dataset.level=level;
     statusEl.innerHTML='<span class="live"></span>';
     statusEl.appendChild(document.createTextNode(message));
+  }
+  function sensorNumber(v,digits=1){return Number.isFinite(v)?v.toFixed(digits):'—'}
+  function updateSensorPanel(){
+    if(!$('sensorDetails').open)return;
+    const [x,y]=currentTilt();
+    const degrees=s=>s?[sensorNumber(s.alpha),sensorNumber(s.beta),sensorNumber(s.gamma)].join(' / ')+'°':'Not provided';
+    $('diagSource').textContent=hasSensor&&performance.now()-sensorTime<2500?sensorSource+' · receiving':'No current movement data';
+    $('diagScreen').textContent=sensorNumber(screenAngle()*180/Math.PI,0)+'°';
+    $('diagOrientation').textContent=degrees(rawOrientation);
+    $('diagRotation').textContent=rawRotation?degrees(rawRotation).replace('°','°/s'):'Not provided';
+    $('diagGravity').textContent=rawGravity?[sensorNumber(rawGravity.x),sensorNumber(rawGravity.y),sensorNumber(rawGravity.z)].join(' / ')+' m/s²':'Not provided';
+    $('diagSteering').textContent=`${Math.round(x*100)}% / ${Math.round(y*100)}%`;
   }
   function angleDelta(a,b){let d=a-b;while(d>180)d-=360;while(d< -180)d+=360;return d}
   function screenAngle(){let a=screen.orientation?.angle;if(!Number.isFinite(a))a=window.orientation||0;return a*Math.PI/180}
@@ -657,10 +830,16 @@
   }
   function sensorEvent(event){
     if(!Number.isFinite(event.beta)||!Number.isFinite(event.gamma))return;
+    rawOrientation={alpha:Number.isFinite(event.alpha)?event.alpha:null,beta:event.beta,gamma:event.gamma};
     orientationTime=performance.now();
     acceptSensor({beta:event.beta,gamma:event.gamma},'orientation');
   }
   function motionEvent(event){
+    // Preserve original event fields for diagnostics; angular rate is genuine browser-provided data when present.
+    const rate=event.rotationRate;
+    if(rate){rawRotation={alpha:Number.isFinite(rate.alpha)?rate.alpha:null,beta:Number.isFinite(rate.beta)?rate.beta:null,gamma:Number.isFinite(rate.gamma)?rate.gamma:null};}
+    const grav=event.accelerationIncludingGravity;
+    if(grav){rawGravity={x:Number.isFinite(grav.x)?grav.x:null,y:Number.isFinite(grav.y)?grav.y:null,z:Number.isFinite(grav.z)?grav.z:null};}
     // Gravity is a robust backup when a browser omits orientation angles.
     // The constant converts a measured g-axis projection into approximate degrees.
     const g=event.accelerationIncludingGravity;
@@ -716,14 +895,14 @@
       }
     },6500);
   }
-  function launch(){phase='playing';overlay.classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');$('tiltStart').classList.remove('hidden');
+  function launch(){phase='playing';$('preGameStyle').classList.add('hidden');overlay.classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');$('tiltStart').classList.remove('hidden');
     resetBall();updateControls();tLast=performance.now()}
   function showDialog(title,eyebrow,copy,primaryLabel,secondaryLabel){
     $('profileEntry').classList.add('hidden');
     $('dialogTitle').innerHTML=title;$('dialogEyebrow').textContent=eyebrow;$('dialogCopy').textContent=copy;
     $('tiltStart').innerHTML=primaryLabel+' <span class="arrow" aria-hidden="true">↗</span>';
     $('chooseLevel').innerHTML=secondaryLabel+' <span class="arrow" aria-hidden="true">→</span>';
-    $('tiltStart').classList.remove('hidden');$('chooseLevel').classList.remove('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');
+    $('tiltStart').classList.remove('hidden');$('chooseLevel').classList.remove('hidden');$('preGameStyle').classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');
     $('dialogChips').classList.add('hidden');
     $('dialogFine').classList.remove('error');
     $('dialogFine').innerHTML=`${currentName()} best: <span class="best">${best?formatTime(best):'Not yet completed'}</span>`;
@@ -733,7 +912,7 @@
   function pause(){if(phase!=='playing')return;phase='paused';vx=vy=0;smoothX=smoothY=0;
     showDialog('PAUSED<span class="gradient">.</span>',currentName().toUpperCase(),'The marble stays in place and the clock stops. Tilt the phone to continue.','Resume with tilt','Choose mazes')}
   function win(){if(phase!=='playing')return;phase='won';
-    const earned=scoreLevel(elapsed,bumpCount),scoreKey=`${mode}:${mode==='classic'?levelIndex:specialIndex}`;
+    const earned=scoreLevel(speedAdjustedElapsed,bumpCount),scoreKey=`${mode}:${mode==='classic'?levelIndex:specialIndex}`;
     if(playerProfile){playerProfile.scores[scoreKey]=Math.max(Number(playerProfile.scores[scoreKey])||0,earned);
       playerProfile.highScore=Math.max(Number(playerProfile.highScore)||0,earned);}
     if(!best||elapsed<best){best=elapsed;if(mode==='classic')levelResults[levelIndex]=Number(elapsed.toFixed(2));
@@ -785,7 +964,7 @@
     $('dialogEyebrow').textContent='CLASSIC & SPECIAL CHALLENGES';
     $('dialogCopy').textContent='Classic levels unlock in sequence. All five original special-shape mazes are available immediately. Only phone tilt moves the ball.';
     $('dialogChips').classList.add('hidden');$('tiltStart').classList.add('hidden');
-    $('chooseLevel').classList.add('hidden');pickerTabs.classList.remove('hidden');
+    $('chooseLevel').classList.add('hidden');$('preGameStyle').classList.add('hidden');pickerTabs.classList.remove('hidden');
     renderPicker(mode);
     $('dialogFine').classList.remove('error');$('dialogFine').textContent='Choose a maze to start. Gyroscope permission is required; menus can be tapped.';
     overlay.classList.remove('hidden');updateControls();
@@ -797,10 +976,10 @@
     $('playerName').value=previousName;
     $('dialogTitle').innerHTML='TILT <span class="gradient">LABYRINTH.</span>';
     $('dialogEyebrow').textContent='LANDSCAPE · PERSONAL RECORDS';
-    $('dialogCopy').textContent='Enter your name, tilt your phone to navigate, and return to your last level anytime. Classic and Special mazes are gyro only.';
+    $('dialogCopy').textContent='Enter a player name, choose your maze theme, ball and speed, then play with phone tilt. Your appearance and score records are saved on this device.';
     $('dialogChips').classList.remove('hidden');$('profileEntry').classList.remove('hidden');
     picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');
-    $('tiltStart').classList.remove('hidden');$('chooseLevel').classList.add('hidden');
+    $('tiltStart').classList.remove('hidden');$('chooseLevel').classList.add('hidden');$('preGameStyle').classList.remove('hidden');
     $('dialogFine').classList.remove('error');$('dialogFine').textContent='HTTPS and phone motion permission required. Turn your phone sideways for a wider playing area.';
     $('playerName').value=playerProfile?.name||$('playerName').value;
     renderProfilePreview();overlay.classList.remove('hidden');updateControls();
@@ -825,15 +1004,17 @@
     // Intentionally no joystick, keyboard, pointer, swipe or drag movement.
     // Only readings accepted from phone motion sensors can accelerate the ball.
     if(!hasSensor||performance.now()-sensorTime>2500)return;
-    elapsed+=dt;updateClock();
+    elapsed+=dt;speedAdjustedElapsed+=dt*currentSpeed().factor;updateClock();
     const [targetX,targetY]=currentTilt();
     smoothX+=(targetX-smoothX)*clamp(dt*13,0,1);
     smoothY+=(targetY-smoothY)*clamp(dt*13,0,1);
     const magnitude=Math.hypot(smoothX,smoothY);
     if(magnitude>1){smoothX/=magnitude;smoothY/=magnitude}
-    const accel=650;vx+=smoothX*accel*dt;vy+=smoothY*accel*dt;
+    const movementScale=currentSpeed().factor;
+    const accel=650*movementScale;vx+=smoothX*accel*dt;vy+=smoothY*accel*dt;
     const drag=Math.pow(.91,dt*60);vx*=drag;vy*=drag;
-    let speed=Math.hypot(vx,vy);if(speed>175){vx*=175/speed;vy*=175/speed}
+    const maxSpeed=175*movementScale;
+    let speed=Math.hypot(vx,vy);if(speed>maxSpeed){vx*=maxSpeed/speed;vy*=maxSpeed/speed}
     const steps=Math.max(1,Math.ceil(Math.max(Math.abs(vx),Math.abs(vy))*dt/3));
     for(let i=0;i<steps;i++){
       if(mode==='special')specialMove(dt/steps);
@@ -846,22 +1027,173 @@
   function drawGoal(time){
     const [x,y]=mode==='classic'?[W-S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
     ctx.save();
-    let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,'#ed4caa35');aura.addColorStop(1,'#ed4caa00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
-    ctx.strokeStyle='#b52a84';ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
-    ctx.fillStyle='#e64caa';ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();
-    const [sx,sy]=mode==='classic'?[S/2,H-S/2]:roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle='#267bdb';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
+    let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,rgba(mazeTheme.finish,.28));aura.addColorStop(1,rgba(mazeTheme.finish,0));ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle=mazeTheme.finish;ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
+    ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();
+    const [sx,sy]=mode==='classic'?[S/2,H-S/2]:roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
+  }
+  function ballSkin(context,x,y,r,choice,{glow=true}={}){
+    const color=getBallPalette(choice),style=choice.style;
+    context.save();context.translate(x,y);
+    if(glow){const aura=context.createRadialGradient(0,0,r*.5,0,0,r*2.5);
+      aura.addColorStop(0,color.glow+'50');aura.addColorStop(1,color.glow+'00');
+      context.fillStyle=aura;context.beginPath();context.arc(0,0,r*2.5,0,Math.PI*2);context.fill();}
+    let grad=context.createRadialGradient(-r*.37,-r*.44,r*.08,0,0,r);
+    if(style==='metal'){
+      grad.addColorStop(0,'#ffffff');grad.addColorStop(.24,'#e6ebf4');grad.addColorStop(.47,color.mid);grad.addColorStop(.66,'#eef0f5');grad.addColorStop(1,'#4a556d');
+    }else if(style==='neon'){
+      grad.addColorStop(0,color.light);grad.addColorStop(.27,color.mid);grad.addColorStop(.66,color.dark);grad.addColorStop(1,'#0a132d');
+    }else if(style==='soccer'){
+      grad.addColorStop(0,'#ffffff');grad.addColorStop(.8,'#e9edf3');grad.addColorStop(1,'#9ba8b7');
+    }else if(style==='eight'){
+      grad.addColorStop(0,color.mid);grad.addColorStop(.45,color.dark);grad.addColorStop(1,'#0d1224');
+    }else{
+      grad.addColorStop(0,color.light);grad.addColorStop(.25,color.mid);grad.addColorStop(.77,color.dark);grad.addColorStop(1,'#141b45');
+    }
+    context.shadowColor=color.dark+'88';context.shadowBlur=r*.65;context.shadowOffsetY=r*.2;
+    context.fillStyle=grad;context.beginPath();context.arc(0,0,r,0,Math.PI*2);context.fill();
+    context.shadowBlur=0;context.shadowOffsetY=0;
+    context.save();context.beginPath();context.arc(0,0,r*.96,0,Math.PI*2);context.clip();
+    if(style==='soccer'){
+      const patch=(cx,cy,rad,rotation)=>{context.beginPath();for(let i=0;i<5;i++){
+        const a=rotation+Math.PI*2*i/5-Math.PI/2;const xx=cx+rad*Math.cos(a),yy=cy+rad*Math.sin(a);
+        if(i===0)context.moveTo(xx,yy);else context.lineTo(xx,yy);}context.closePath();context.fill();};
+      context.fillStyle=color.dark;context.strokeStyle=color.dark;context.lineWidth=r*.065;
+      patch(0,0,r*.33,0);
+      for(let i=0;i<5;i++){const a=Math.PI*2*i/5-Math.PI/2,cx=Math.cos(a)*r*.85,cy=Math.sin(a)*r*.85;
+        patch(cx,cy,r*.24,a);context.beginPath();context.moveTo(Math.cos(a)*r*.31,Math.sin(a)*r*.31);context.lineTo(cx*.73,cy*.73);context.stroke();}
+    }else if(style==='basketball'){
+      context.strokeStyle=color.dark;context.lineWidth=r*.075;
+      context.beginPath();context.moveTo(-r,0);context.lineTo(r,0);context.moveTo(0,-r);context.lineTo(0,r);
+      context.moveTo(-r*.8,-r*.7);context.bezierCurveTo(r*.2,-r*.2,r*.2,r*.2,-r*.8,r*.7);
+      context.moveTo(r*.8,-r*.7);context.bezierCurveTo(-r*.2,-r*.2,-r*.2,r*.2,r*.8,r*.7);context.stroke();
+    }else if(style==='eight'){
+      context.fillStyle='#f8f8fa';context.beginPath();context.arc(r*.12,r*.06,r*.42,0,2*Math.PI);context.fill();
+      context.fillStyle='#131624';context.font=`900 ${r*.63}px ui-sans-serif,system-ui,sans-serif`;context.textAlign='center';context.textBaseline='middle';context.fillText('8',r*.12,r*.07);
+    }else if(style==='neon'){
+      context.strokeStyle=color.light;context.lineWidth=r*.075;context.beginPath();context.arc(0,0,r*.82,0,2*Math.PI);context.stroke();
+    }else if(style==='metal'){
+      context.fillStyle='#ffffff55';context.fillRect(-r,-r*.51,r*2,r*.1);
+      context.fillStyle='#151f3844';context.fillRect(-r,r*.45,r*2,r*.1);
+    }
+    context.restore();
+    context.strokeStyle=style==='soccer'?'#bcc5d3':color.light;context.lineWidth=Math.max(.7,r*.065);
+    context.beginPath();context.arc(0,0,r*.975,0,Math.PI*2);context.stroke();
+    if(style!=='eight'){context.fillStyle='#ffffff8a';context.beginPath();context.ellipse(-r*.32,-r*.45,r*.18,r*.11,-.45,0,Math.PI*2);context.fill();}
+    context.restore();
   }
   function drawBall(){
-    for(let i=1;i<trail.length;i++){const a=trail[i],op=(i/trail.length)*.25;ctx.fillStyle=`rgba(27,115,209,${op.toFixed(3)})`;ctx.beginPath();ctx.arc(a[0],a[1],RAD*(.28+.28*i/trail.length),0,Math.PI*2);ctx.fill()}
-    const halo=RAD*2.65;
-    const glow=ctx.createRadialGradient(px,py,0,px,py,halo);glow.addColorStop(0,'#378dff3c');glow.addColorStop(1,'#378dff00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px,py,halo,0,Math.PI*2);ctx.fill();
-    let grad=ctx.createRadialGradient(px-RAD*.36,py-RAD*.43,1.3,px,py,RAD);grad.addColorStop(0,'#fcffff');grad.addColorStop(.24,'#81cafa');grad.addColorStop(.65,'#2367ad');grad.addColorStop(1,'#112e68');
-    ctx.shadowColor='#15498a8c';ctx.shadowBlur=8;ctx.shadowOffsetY=2;ctx.fillStyle=grad;ctx.beginPath();ctx.arc(px,py,RAD,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    ctx.strokeStyle='#e6f9ff';ctx.lineWidth=.7;ctx.stroke();
+    const color=getBallPalette(ballChoice);
+    for(let i=1;i<trail.length;i++){
+      const a=trail[i],op=Math.round((i/trail.length)*70).toString(16).padStart(2,'0');
+      ctx.fillStyle=color.glow+op;ctx.beginPath();ctx.arc(a[0],a[1],RAD*(.28+.28*i/trail.length),0,Math.PI*2);ctx.fill();
+    }
+    ballSkin(ctx,px,py,RAD,ballChoice);
   }
-  function draw(now){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#fffefe';ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);drawBall();ctx.restore()}
+  function paintBallPicker(){
+    const presets=$('themePresets');presets.textContent='';
+    for(const theme of THEMES){
+      const button=document.createElement('button');button.type='button';button.className='theme-preset';
+      button.setAttribute('aria-pressed',String(mazeTheme.id===theme.id));button.setAttribute('aria-label',theme.name+' maze theme');
+      const sample=document.createElement('span');sample.className='theme-preset-sample';
+      const colors=theme.id==='custom'?mazeTheme:theme;
+      sample.style.background=`linear-gradient(135deg, ${colors.floor} 0% 28%, ${colors.wall1} 29% 34%, ${colors.floor} 35% 64%, ${colors.wall2} 65% 70%, ${colors.floor} 71%)`;
+      const name=document.createElement('span');name.textContent=theme.name;button.append(sample,name);
+      button.addEventListener('click',()=>{setTheme(theme.id==='custom'?{...mazeTheme,id:'custom'}:theme);persistBallChoice();paintBallPicker()});presets.appendChild(button);
+    }
+    $('customTheme').classList.toggle('hidden',mazeTheme.id!=='custom');
+    const themeInputs={themeFloor:'floor',themeWall1:'wall1',themeWall2:'wall2',themeFinish:'finish'};
+    for(const [id,key] of Object.entries(themeInputs))$(id).value=mazeTheme[key];
+    $('ballCustomColor').value=ballChoice.customColor;
+    const colors=$('skinColors'),styles=$('skinStyles');colors.textContent='';styles.textContent='';
+    for(const c of BALL_COLORS){
+      const button=document.createElement('button');button.type='button';button.className='skin-color';
+      button.title=c.name;button.setAttribute('aria-label',c.name);button.setAttribute('aria-pressed',String(ballChoice.color===c.id));
+      const swatch=document.createElement('span');swatch.className='skin-swatch';swatch.style.background=c.mid;button.appendChild(swatch);
+      button.addEventListener('click',()=>{ballChoice.color=c.id;persistBallChoice();paintBallPicker()});colors.appendChild(button);
+    }
+    for(const style of BALL_STYLES){
+      const button=document.createElement('button');button.type='button';button.className='skin-style';
+      button.setAttribute('aria-label',style.name);button.setAttribute('aria-pressed',String(ballChoice.style===style.id));
+      const preview=document.createElement('canvas');preview.width=72;preview.height=72;
+      const c=preview.getContext('2d');ballSkin(c,36,36,27,{...ballChoice,style:style.id},{glow:false});button.appendChild(preview);
+      const name=document.createElement('span');name.textContent=style.name;button.appendChild(name);
+      button.addEventListener('click',()=>{ballChoice.style=style.id;persistBallChoice();paintBallPicker()});styles.appendChild(button);
+    }
+    renderSpeedOptions();
+    paintThemePreview();
+  }
+  function renderSpeedOptions(){
+    const container=$('speedOptions');container.textContent='';
+    for(const option of SPEED_PRESETS){
+      const button=document.createElement('button');button.type='button';button.className='speed-option';
+      button.setAttribute('aria-pressed',String(speedChoice===option.id));
+      button.setAttribute('aria-label',option.name+' speed '+option.label);
+      const label=document.createElement('strong');label.textContent=option.name;
+      const ratio=document.createElement('small');ratio.textContent=option.label;
+      button.append(label,ratio);
+      button.addEventListener('click',()=>{
+        speedChoice=option.id;persistBallChoice();renderSpeedOptions();
+      });container.appendChild(button);
+    }
+  }
+  function paintThemePreview(){
+    const c=$('themePreview'),p=c.getContext('2d'),w=c.width,h=c.height;
+    p.clearRect(0,0,w,h);p.fillStyle=mazeTheme.floor;p.fillRect(0,0,w,h);
+    const wall=p.createLinearGradient(0,0,w,0);wall.addColorStop(0,mazeTheme.wall1);wall.addColorStop(1,mazeTheme.wall2);
+    p.strokeStyle=wall;p.lineCap='square';p.lineJoin='miter';p.lineWidth=4;p.beginPath();
+    for(const [x1,y1,x2,y2] of [[6,6,130,6],[130,6,130,48],[130,48,238,48],[238,48,238,9],[238,9,414,9],[414,9,414,80],[6,6,6,110],[6,110,160,110],[160,110,160,85],[160,85,345,85],[345,85,345,111],[75,6,75,75],[75,75,124,75],[196,48,196,109],[286,9,286,48],[345,44,414,44]]){
+      p.moveTo(x1,y1);p.lineTo(x2,y2);
+    }p.stroke();
+    p.strokeStyle=mazeTheme.wall1;p.lineWidth=2;p.beginPath();p.arc(35,94,13,0,Math.PI*2);p.stroke();
+    p.strokeStyle=mazeTheme.finish;p.beginPath();p.arc(390,61,13,0,Math.PI*2);p.stroke();
+    p.fillStyle=mazeTheme.finish;p.beginPath();p.arc(390,61,5,0,Math.PI*2);p.fill();
+    ballSkin(p,42,42,15,ballChoice,{glow:false});
+  }
+  function persistBallChoice(){if(playerProfile){playerProfile.ball={...ballChoice};playerProfile.theme={...mazeTheme};playerProfile.speed=speedChoice;saveProfiles();}}
+  function openBallPicker(){
+    if(!playerProfile){toast('Enter a player name to customize');return}
+    skinReturnToIntro=phase==='intro';
+    skinReturnPlaying=phase==='playing';
+    if(skinReturnPlaying){phase='paused';vx=vy=0;smoothX=smoothY=0;}
+    paintBallPicker();$('skinOverlay').classList.remove('hidden');
+    document.querySelector('.skin-dialog').scrollTop=0;$('skinTitle').focus({preventScroll:true});
+  }
+  function closeBallPicker(){
+    $('skinOverlay').classList.add('hidden');
+    if(skinReturnPlaying&&!document.hidden){phase='playing';tLast=performance.now();}
+    if(skinReturnToIntro)showProfileDialog();
+    skinReturnPlaying=false;skinReturnToIntro=false;
+    updateControls();
+  }
+  $('ballButton').addEventListener('click',()=>{
+    if(!playerProfile&&phase==='intro'){
+      if(!activatePlayer())return;
+      phase='intro';skinReturnToIntro=true;
+    }
+    openBallPicker();
+  });
+  $('preGameStyle').addEventListener('click',()=>{
+    if(!playerProfile&&!activatePlayer())return;
+    phase='intro';openBallPicker();
+  });
+  for(const [id,key] of Object.entries({themeFloor:'floor',themeWall1:'wall1',themeWall2:'wall2',themeFinish:'finish'})){
+    $(id).addEventListener('input',event=>{
+      setTheme({...mazeTheme,id:'custom',[key]:hexColor(event.target.value,mazeTheme[key])});
+      persistBallChoice();paintThemePreview();
+    });
+    $(id).addEventListener('change',paintBallPicker);
+  }
+  $('ballCustomColor').addEventListener('input',event=>{
+    ballChoice.color='custom';ballChoice.customColor=hexColor(event.target.value,ballChoice.customColor);
+    persistBallChoice();paintThemePreview();
+  });
+  $('ballCustomColor').addEventListener('change',paintBallPicker);
+  $('skinDone').addEventListener('click',closeBallPicker);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('skinOverlay').classList.contains('hidden'))closeBallPicker()});
+  function draw(now){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);drawBall();ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
-    if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus()}
+    if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
   async function primaryStart(){
     if(!playerProfile&& !activatePlayer())return;
@@ -898,7 +1230,10 @@
       tilt:currentTilt(),columns:C,rows:R}),
     walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
     onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}}),
-    profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null};
+    profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null,
+    ball:()=>({...ballChoice}),chooseBall:(style,color)=>{ballChoice=normalizeBall({style,color});persistBallChoice();paintBallPicker()},
+    speed:()=>({id:speedChoice,factor:currentSpeed().factor}),chooseSpeed:id=>{speedChoice=normalizeSpeed(id);persistBallChoice();renderSpeedOptions()},
+    sensorDiagnostics:()=>({orientation:rawOrientation?{...rawOrientation}:null,rotationRate:rawRotation?{...rawRotation}:null,gravity:rawGravity?{...rawGravity}:null,screenAngleDegrees:screenAngle()*180/Math.PI,steering:currentTilt(),source:sensorSource})};
 })();
 </script>
 </body>
