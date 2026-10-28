@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#fdfbff">
-  <meta name="description" content="Gyro-only maze with four selectable ball speeds, custom maze themes, ball skins, player profiles and 15 levels.">
-  <title>Tilt Labyrinth V9.1 | Custom Themes, Balls & Speed</title>
+  <meta name="description" content="Gyro-only maze with 10 classic levels, 5 original special shapes and one floating 3D challenge, customizable colors and persistent player records.">
+  <title>Tilt Labyrinth V10 | Special 3D Challenge</title>
   <style>
     :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
     *{box-sizing:border-box}
@@ -208,6 +208,11 @@
     @media(orientation:landscape) and (max-height:510px){.speed-option{min-height:37px;padding:4px 2px;gap:1px}.speed-option strong{font-size:10px}.speed-option small{font-size:8px}.speed-note{margin:3px 0 0!important}}
     /* Audit update: transparent raw phone sensor readings, without blocking play. */
     .bottom-bar{position:relative}
+    /* 3D special challenge is a canvas render: normal maze UI stays unchanged. */
+    .special-tile.challenge-tile{border-color:#688ac5;background:linear-gradient(135deg,#101e3d,#344a85);color:#f5f7ff}
+    .special-tile.challenge-tile small{color:#a9c8ff}
+    .special-tile.challenge-tile.current{border:2px solid #6eafff}
+    .special-tile.challenge-tile svg{filter:drop-shadow(0 0 5px #6b9cffaa)}
     .sensor-details{position:relative;flex:0 0 auto;font-size:10px;z-index:6}
     .sensor-details summary{list-style:none;cursor:pointer;user-select:none;border:1px solid #d5dbee;background:#f8f9fd;border-radius:9px;padding:8px 10px;color:#33446d;font-size:10px;font-weight:850;white-space:nowrap;min-height:32px;display:flex;align-items:center}
     .sensor-details summary::-webkit-details-marker{display:none}
@@ -266,9 +271,9 @@
   <section class="dialog" aria-labelledby="dialogTitle">
     <div class="eyebrow" id="dialogEyebrow">THE MAZE AWAITS</div>
     <h1 id="dialogTitle">TILT<br><span class="gradient">LABYRINTH.</span></h1>
-    <p class="copy" id="dialogCopy">Customize your maze, ball and speed before playing. Ten Classic and five Special mazes use phone gyro only, each with a verified route.</p>
+    <p class="copy" id="dialogCopy">Customize your maze, ball and speed before playing. Ten Classic and six Special mazes use phone gyro only, each with a verified route.</p>
     <p class="landscape-hint">Rotate your phone to landscape for the best view.</p>
-    <div class="chips" id="dialogChips"><span class="chip">10 CLASSIC</span><span class="chip">5 SPECIAL</span><span class="chip">GYRO ONLY</span></div>
+    <div class="chips" id="dialogChips"><span class="chip">10 CLASSIC</span><span class="chip">6 SPECIAL</span><span class="chip">GYRO ONLY</span></div>
     <div class="profile-entry" id="profileEntry">
       <label for="playerName">PLAYER NAME</label>
       <input id="playerName" type="text" inputmode="text" enterkeyhint="done" autocomplete="nickname" maxlength="18" placeholder="Enter a player name" />
@@ -276,7 +281,7 @@
       <div class="record-line" id="playerRecord" role="status">Enter a name to create or continue a record.</div>
       <div class="local-standings" id="localStandings"></div>
     </div>
-    <div class="picker-tabs hidden" id="pickerTabs"><button class="picker-tab selected" id="classicTab">CLASSIC · 10</button><button class="picker-tab" id="specialTab">SPECIAL · 5</button></div>
+    <div class="picker-tabs hidden" id="pickerTabs"><button class="picker-tab selected" id="classicTab">CLASSIC · 10</button><button class="picker-tab" id="specialTab">SPECIAL · 6</button></div>
     <div class="level-picker hidden" id="levelPicker" aria-label="Unlocked classic levels"></div>
     <div class="special-picker hidden" id="specialPicker" aria-label="Special-shaped mazes"></div>
     <button class="cta primary" id="tiltStart">Enable tilt & play <span class="arrow" aria-hidden="true">↗</span></button>
@@ -321,7 +326,8 @@
     {id:'butterfly',name:'Butterfly',hint:'Symmetrical wings',cols:45,rows:39},
     {id:'cat',name:'Halloween Cat',hint:'Ears, body & curled tail',cols:42,rows:42},
     {id:'star',name:'Star',hint:'Five branching points',cols:39,rows:39},
-    {id:'carrot',name:'Carrot',hint:'Diagonal body & leaves',cols:46,rows:43}];
+    {id:'carrot',name:'Carrot',hint:'Diagonal body & leaves',cols:46,rows:43},
+    {id:'threeD',name:'3D Challenge',hint:'Floating paths · 4 crystals',cols:19,rows:15}];
   let C=LEVELS[0][0],R=LEVELS[0][1],W=C*S,H=R*S;
   const N=1,E=2,SO=4,WE=8;
   const DIRS=[[0,-1,N,SO],[1,0,E,WE],[0,1,SO,N],[-1,0,WE,E]];
@@ -333,6 +339,10 @@
   const mctx=mazeTexture.getContext('2d',{alpha:false});
   let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0;
   let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null;
+  // Independent floating platform topology, deliberately isolated from all existing five specials.
+  const CRYSTAL_COUNT=4;
+  let platformMask=null,challengeRoute=[],crystals=[],challengeFalls=0,isoCamX=0,isoCamY=0,challengeThreeD=false;
+  const threeDActive=()=>mode==='special'&&SPECIALS[specialIndex]?.id==='threeD';
   const BUCKET=S*2;
   const bucketKey=(a,b)=>a+','+b;
   function addWall(x1,y1,x2,y2){
@@ -406,7 +416,7 @@
     ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
     :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0];
   let ballChoice={...DEFAULT_BALL},mazeTheme={...DEFAULT_THEME},skinReturnPlaying=false,skinReturnToIntro=false;
-  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')paintMaze();else paintSpecialMaze()}}
+  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')paintMaze();else if(!threeDActive())paintSpecialMaze()}}
 
   const PROFILE_STORE='tilt-labyrinth-v6-profiles';
   const ACTIVE_STORE='tilt-labyrinth-v6-active';
@@ -446,7 +456,7 @@
   function renderProfilePreview(){
     const name=cleanName($('playerName').value),p=profileForName(name),el=$('playerRecord');
     if(!name){el.textContent='Enter a name to create or continue a record.'}
-    else if(p){const when=new Date(p.lastPlayed).toLocaleDateString(undefined,{month:'short',day:'numeric'});el.textContent=`Continue ${lastStage(p)} · Best score ${Number(p.highScore||0).toLocaleString('en-US')} · Total ${playerTotal(p).toLocaleString('en-US')} points · ${Object.keys(p.scores||{}).length}/15 completed · Last played ${when}`;}
+    else if(p){const when=new Date(p.lastPlayed).toLocaleDateString(undefined,{month:'short',day:'numeric'});el.textContent=`Continue ${lastStage(p)} · Best score ${Number(p.highScore||0).toLocaleString('en-US')} · Total ${playerTotal(p).toLocaleString('en-US')} points · ${Object.keys(p.scores||{}).length}/16 completed · Last played ${when}`;}
     else{el.textContent=`New player: ${name} · Starts at Classic 1 · No scores yet`;}
     const ranked=Object.values(profiles).sort((a,b)=>playerTotal(b)-playerTotal(a)).slice(0,3);
     $('localStandings').textContent=ranked.length?'ON THIS DEVICE · '+ranked.map((x,i)=>`${i+1}. ${x.name}: ${playerTotal(x).toLocaleString('en-US')}`).join('   ·   '):'';
@@ -715,6 +725,49 @@
     return [x,y];
   }
   function specialMove(dt){let nx=px+vx*dt,ny=py+vy*dt;[nx,ny]=collisionAt(nx,ny);px=nx;py=ny;}
+  // Generate a true connected maze of floating platforms on a coarse tree grid.
+  // Platforms are 1 cell wide. Bridge cells join coarse nodes, without diagonal
+  // shortcuts. All nodes are reachable, and the required crystals lie on the
+  // guaranteed start -> exit path. No image-only or non-interactive geometry.
+  function build3DChallenge(randomSeed){
+    const rng=randGen(randomSeed),cw=Math.floor((C-1)/2),ch=Math.floor((R-1)/2);
+    const tree=Array.from({length:cw*ch},()=>[]),seen=new Uint8Array(cw*ch);
+    const root=(ch-1)*cw,stack=[root];seen[root]=1;
+    while(stack.length){const a=stack[stack.length-1],cx=a%cw,cy=Math.floor(a/cw),opts=[];
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=cx+dx,ny=cy+dy;if(nx>=0&&ny>=0&&nx<cw&&ny<ch&&!seen[ny*cw+nx])opts.push(ny*cw+nx);
+      }
+      if(!opts.length){stack.pop();continue}
+      const b=opts[Math.floor(rng()*opts.length)];tree[a].push(b);tree[b].push(a);seen[b]=1;stack.push(b);
+    }
+    // Locate a distant destination for a substantial but always solvable route.
+    const previous=new Int32Array(tree.length).fill(-1),dist=new Int32Array(tree.length).fill(-1);
+    const queue=[root];dist[root]=0;
+    for(let q=0;q<queue.length;q++)for(const b of tree[queue[q]])if(dist[b]<0){dist[b]=dist[queue[q]]+1;previous[b]=queue[q];queue.push(b)}
+    let target=root;for(let i=0;i<dist.length;i++)if(dist[i]>dist[target])target=i;
+    const coarseRoute=[];for(let a=target;a>=0;a=previous[a]){coarseRoute.push(a);if(a===root)break}
+    coarseRoute.reverse();
+    platformMask=new Uint8Array(C*R);
+    const fineIndex=i=>{const x=1+2*(i%cw),y=1+2*Math.floor(i/cw);return y*C+x};
+    for(let a=0;a<tree.length;a++){
+      platformMask[fineIndex(a)]=1;
+      for(const b of tree[a]){const ax=1+2*(a%cw),ay=1+2*Math.floor(a/cw),bx=1+2*(b%cw),by=1+2*Math.floor(b/cw);
+        platformMask[((ay+by)/2)*C+(ax+bx)/2]=1;
+      }
+    }
+    challengeRoute=[];
+    for(let i=0;i<coarseRoute.length;i++){
+      const a=coarseRoute[i],at=fineIndex(a);
+      if(i){const b=coarseRoute[i-1],ax=1+2*(a%cw),ay=1+2*Math.floor(a/cw),bx=1+2*(b%cw),by=1+2*Math.floor(b/cw);challengeRoute.push(((ay+by)/2)*C+(ax+bx)/2)}
+      challengeRoute.push(at);
+    }
+    startCell=challengeRoute[0];goalCell=challengeRoute[challengeRoute.length-1];
+    crystals=Array.from({length:CRYSTAL_COUNT},(_,i)=>({cell:challengeRoute[Math.round((i+1)/(CRYSTAL_COUNT+1)*(challengeRoute.length-1))],taken:false}));
+    challengeFalls=0;pathLength=challengeRoute.length-1;deadEnds=tree.filter(x=>x.length===1).length;
+    // The old special-wall renderer is never used for this mode.
+    activeMask=null;roundMode=false;roundGeom=null;grid=new Uint8Array(C*R);resetWallMap();
+    return {connected:seen.every(x=>x===1),route:pathLength,platforms:platformMask.reduce((n,v)=>n+v,0)};
+  }
   function loadLevel(nextIndex,nextMode=mode){
     mode=nextMode;
     if(mode==='classic'){levelIndex=clamp(nextIndex,0,unlocked);[C,R]=LEVELS[levelIndex];}
@@ -739,9 +792,19 @@
       paintMaze();
     }else{
       const shapeSeed=((levelRandom()*0xffffffff)>>>0)||1;seed=shapeSeed;
-      if(SPECIALS[specialIndex].id==='circle')buildCircleMaze(shapeSeed);
-      else buildShapeMaze(SPECIALS[specialIndex].id,shapeSeed);
-      constructSpecialWalls();paintSpecialMaze();
+      if(threeDActive()){
+        let result;
+        for(let attempt=0;attempt<12;attempt++){
+          result=build3DChallenge((shapeSeed+Math.imul(attempt,0x9e3779b9))>>>0);
+          if(result.connected&&result.route>=24)break;
+        }
+        if(!result.connected||result.route<24)throw new Error('Floating 3D challenge connectivity failed');
+      }else{
+        platformMask=null;
+        if(SPECIALS[specialIndex].id==='circle')buildCircleMaze(shapeSeed);
+        else buildShapeMaze(SPECIALS[specialIndex].id,shapeSeed);
+        constructSpecialWalls();paintSpecialMaze();
+      }
     }
     resetBall();updateLevelUI();saveProgress();
     if(width&&height)resize();
@@ -769,6 +832,10 @@
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
     }else{px=S/2;py=H-S/2;}
+    if(threeDActive()){
+      challengeFalls=0;for(const gem of crystals)gem.taken=false;
+      isoCamX=px+S*3.4;isoCamY=py-S*1.5;
+    }
     vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
     updateClock();camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();}
   function resize(){width=playfield.clientWidth;height=playfield.clientHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
@@ -778,7 +845,12 @@
     zoom=Math.min(zoom,Math.max(width,height)/260); // keep ball and walls navigable on small screens
     restrictCamera();}
   function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
-  function updateCamera(dt){const vw=width/zoom,vh=height/zoom;
+  function updateCamera(dt){
+    if(threeDActive()){
+      const follow=1-Math.exp(-dt*5.5);isoCamX+=(px+S*3.4-isoCamX)*follow;isoCamY+=(py-S*1.5-isoCamY)*follow;
+      return;
+    }
+    const vw=width/zoom,vh=height/zoom;
     const targetX=W>vw?clamp(px-vw/2,0,W-vw):(W-vw)/2;
     const targetY=H>vh?clamp(py-vh/2,0,H-vh):(H-vh)/2;
     const f=1-Math.exp(-dt*8);camX+=(targetX-camX)*f;camY+=(targetY-camY)*f;}
@@ -789,12 +861,14 @@
     updateSensorStatus();
   }
   function updateSensorStatus(){
-    let message=`${mode==='classic'?'CLASSIC':'SPECIAL'} ${currentNumber()}/${currentTotal()} · GYRO ONLY`,level='ok';
+    let message=threeDActive()?`3D CHALLENGE · GEMS ${crystals.filter(c=>c.taken).length}/${CRYSTAL_COUNT} · FALLS ${challengeFalls} · GYRO ONLY`:`${mode==='classic'?'CLASSIC':'SPECIAL'} ${currentNumber()}/${currentTotal()} · GYRO ONLY`,level='ok';
     if(sensorProblem){message=sensorProblem;level='error'}
     else if(phase==='playing'){
       if(!hasSensor){message='WAITING FOR PHONE TILT DATA…';level='waiting'}
       else if(performance.now()-sensorTime>2500){message='SENSOR STOPPED · TAP CAL OR RESUME';level='error'}
-      else{const [x,y]=currentTilt();message=`TILT LIVE (${sensorSource}) · STEERING X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`}
+      else{const [x,y]=currentTilt();message=threeDActive()
+        ?`3D · GEMS ${crystals.filter(c=>c.taken).length}/4 · FALLS ${challengeFalls} · TILT X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`
+        :`TILT LIVE (${sensorSource}) · STEERING X ${Math.round(x*100)}% · Y ${Math.round(y*100)}%`}
     }
     statusEl.dataset.level=level;
     statusEl.innerHTML='<span class="live"></span>';
@@ -912,7 +986,7 @@
   function pause(){if(phase!=='playing')return;phase='paused';vx=vy=0;smoothX=smoothY=0;
     showDialog('PAUSED<span class="gradient">.</span>',currentName().toUpperCase(),'The marble stays in place and the clock stops. Tilt the phone to continue.','Resume with tilt','Choose mazes')}
   function win(){if(phase!=='playing')return;phase='won';
-    const earned=scoreLevel(speedAdjustedElapsed,bumpCount),scoreKey=`${mode}:${mode==='classic'?levelIndex:specialIndex}`;
+    const earned=threeDActive()?Math.max(100,scoreLevel(speedAdjustedElapsed,bumpCount)-challengeFalls*80):scoreLevel(speedAdjustedElapsed,bumpCount),scoreKey=`${mode}:${mode==='classic'?levelIndex:specialIndex}`;
     if(playerProfile){playerProfile.scores[scoreKey]=Math.max(Number(playerProfile.scores[scoreKey])||0,earned);
       playerProfile.highScore=Math.max(Number(playerProfile.highScore)||0,earned);}
     if(!best||elapsed<best){best=elapsed;if(mode==='classic')levelResults[levelIndex]=Number(elapsed.toFixed(2));
@@ -922,7 +996,7 @@
     saveProgress();
     showDialog(isFinal?'CHALLENGE <span class="gradient">CLEARED.</span>':'MAZE <span class="gradient">COMPLETE.</span>',
       `${currentName().toUpperCase()} COMPLETE`,
-      `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${bumpCount} wall contacts. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
+      `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${threeDActive()?`${challengeFalls} falls and all four crystals`: `${bumpCount} wall contacts`}. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
       isFinal?'Replay this series':'Next maze · tilt','Choose mazes');
   }
   const shapeIcons={
@@ -930,7 +1004,8 @@
     butterfly:'<path d="M42 27C23 -3 3 3 7 21C8 27 17 30 26 30C5 32 12 52 25 51C33 49 38 37 42 31C46 37 51 49 59 51C72 52 79 32 58 30C67 30 76 27 77 21C81 3 61 -3 42 27Z"/><path d="M42 9V46"/>',
     cat:'<path d="M12 48V25L21 12L30 20L41 12L50 25V44L60 48C70 49 74 30 66 25C60 22 59 29 64 31M12 48H52"/>',
     star:'<path d="M42 3L52 22L77 26L59 43L64 55L42 46L20 55L25 43L7 26L32 22Z"/>',
-    carrot:'<path d="M14 51L40 13L65 20L38 45Z M39 14L31 3L49 8L52 2L58 13L74 11L65 20"/>'
+    carrot:'<path d="M14 51L40 13L65 20L38 45Z M39 14L31 3L49 8L52 2L58 13L74 11L65 20"/>',
+    threeD:'<path d="M8 20L42 4L77 20L43 38Z M8 20V41L43 55V38 M43 55L77 39V20 M25 12L59 28M59 12L25 28"/>'
   };
   function renderPicker(tab){
     picker.classList.toggle('hidden',tab!=='classic');
@@ -945,14 +1020,17 @@
       b.addEventListener('click',async()=>{loadLevel(i,'classic');await beginTilt()});picker.appendChild(b);
     });
     else SPECIALS.forEach((shape,i)=>{
-      const b=document.createElement('button');b.className='special-tile'+(mode==='special'&&specialIndex===i?' current':'');
+      const b=document.createElement('button');b.className='special-tile'+(mode==='special'&&specialIndex===i?' current':'')+(shape.id==='threeD'?' challenge-tile':'');
       const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 84 60');
       svg.setAttribute('fill','none');svg.setAttribute('stroke',i%2?'#7751a1':'#2574be');
       svg.setAttribute('stroke-width','3');svg.setAttribute('stroke-linecap','round');svg.innerHTML=shapeIcons[shape.id];
       b.appendChild(svg);
       const title=document.createElement('span');title.textContent=shape.name;b.appendChild(title);
       const note=document.createElement('small');note.textContent=shape.hint;b.appendChild(note);
-      b.addEventListener('click',async()=>{loadLevel(i,'special');await beginTilt()});specialPicker.appendChild(b);
+      b.addEventListener('click',async()=>{
+        loadLevel(i,'special');await beginTilt();
+        if(shape.id==='threeD'&&phase==='playing')toast('Collect 4 crystals, then reach the glowing exit. Avoid falling!');
+      });specialPicker.appendChild(b);
     });
   }
   function openLevelPicker(){
@@ -962,7 +1040,7 @@
     phase='select';
     $('dialogTitle').innerHTML='CHOOSE <span class="gradient">MAZE.</span>';
     $('dialogEyebrow').textContent='CLASSIC & SPECIAL CHALLENGES';
-    $('dialogCopy').textContent='Classic levels unlock in sequence. All five original special-shape mazes are available immediately. Only phone tilt moves the ball.';
+    $('dialogCopy').textContent='Classic levels unlock in sequence. All five original special-shape mazes plus the 3D platform challenge are available immediately. Only phone tilt moves the ball.';
     $('dialogChips').classList.add('hidden');$('tiltStart').classList.add('hidden');
     $('chooseLevel').classList.add('hidden');$('preGameStyle').classList.add('hidden');pickerTabs.classList.remove('hidden');
     renderPicker(mode);
@@ -1000,6 +1078,32 @@
     else if(vy<0&&(wall&N)){const lim=r*S+RAD+T/2;if(next<lim){next=lim;vy=-vy*.1;hit()}}
     py=clamp(next,RAD+T/2,H-RAD-T/2);
   }
+  function fall3D(){
+    challengeFalls++;
+    bumpCount+=2;
+    [px,py]=cellPos(startCell);vx=vy=0;smoothX=smoothY=0;
+    // Crystals already collected stay collected on falling, so progress is achievable.
+    toast(`Fell off! Attempt ${challengeFalls+1} · crystals retained`);
+  }
+  function platformAt(x,y){
+    if(!platformMask)return false;
+    const cx=Math.floor(x/S),cy=Math.floor(y/S);
+    return cx>=0&&cx<C&&cy>=0&&cy<R&&!!platformMask[cy*C+cx];
+  }
+  function update3D(dt){
+    // 3D challenge has genuinely open edges; only phone tilt can roll the marble.
+    const steps=Math.max(1,Math.ceil(Math.max(Math.abs(vx),Math.abs(vy))*dt/3));
+    for(let i=0;i<steps;i++){
+      const nx=px+vx*dt/steps,ny=py+vy*dt/steps;
+      if(!platformAt(nx,ny)){fall3D();break}
+      px=nx;py=ny;
+    }
+    for(const gem of crystals){if(!gem.taken){const [gx,gy]=cellPos(gem.cell);if(Math.hypot(px-gx,py-gy)<S*.38){gem.taken=true;toast(`Crystal ${crystals.filter(c=>c.taken).length}/${CRYSTAL_COUNT} collected`);}}}
+    if(crystals.every(g=>g.taken)){
+      const [gx,gy]=cellPos(goalCell);
+      if(Math.hypot(px-gx,py-gy)<S*.38)win();
+    }
+  }
   function update(dt){
     // Intentionally no joystick, keyboard, pointer, swipe or drag movement.
     // Only readings accepted from phone motion sensors can accelerate the ball.
@@ -1016,13 +1120,14 @@
     const maxSpeed=175*movementScale;
     let speed=Math.hypot(vx,vy);if(speed>maxSpeed){vx*=maxSpeed/speed;vy*=maxSpeed/speed}
     const steps=Math.max(1,Math.ceil(Math.max(Math.abs(vx),Math.abs(vy))*dt/3));
-    for(let i=0;i<steps;i++){
+    if(threeDActive())update3D(dt);
+    else for(let i=0;i<steps;i++){
       if(mode==='special')specialMove(dt/steps);
       else{moveX(dt/steps);moveY(dt/steps)}
     }
     trailTimer+=dt;if(trailTimer>.033){trailTimer=0;trail.push([px,py]);if(trail.length>22)trail.shift()}
     const goal=mode==='classic'?[W-S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
-    if(Math.hypot(px-goal[0],py-goal[1])<10.5)win();
+    if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
   function drawGoal(time){
     const [x,y]=mode==='classic'?[W-S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
@@ -1191,7 +1296,54 @@
   $('ballCustomColor').addEventListener('change',paintBallPicker);
   $('skinDone').addEventListener('click',closeBallPicker);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('skinOverlay').classList.contains('hidden'))closeBallPicker()});
-  function draw(now){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);drawBall();ctx.restore()}
+  // Lightweight 3D geometry: each walkable cell has a top and exposed extruded
+  // side faces, depth-sorted from back to front, viewed through a fixed angled
+  // projection. The physics uses the actual platform mask, not the artwork.
+  function draw3D(now){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const backdrop=ctx.createRadialGradient(width*.45,height*.52,0,width*.5,height*.55,Math.max(width,height)*.8);
+    backdrop.addColorStop(0,'#15224a');backdrop.addColorStop(.6,'#0a1434');backdrop.addColorStop(1,'#060a1e');
+    ctx.fillStyle=backdrop;ctx.fillRect(0,0,width,height);
+    const scale=clamp(Math.min(width/610,height/385),.65,1.38);
+    const project=(x,y,z=0)=>[(x-isoCamX)*scale + (y-isoCamY)*scale*.18+width*.5,(y-isoCamY)*scale*.72-z*scale+height*.53];
+    const poly=(points,fill,stroke=null,lineWidth=1)=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}};
+    // Depth sorted platforms; no floor is drawn in empty cells.
+    const tiles=[];
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(platformMask[r*C+c])tiles.push([r,c]);
+    for(const [r,c] of tiles){
+      const x=c*S,y=r*S;
+      const p00=project(x,y),p10=project(x+S,y),p11=project(x+S,y+S),p01=project(x,y+S);
+      if(Math.max(...[p00,p10,p11,p01].map(p=>p[0]))< -45||Math.min(...[p00,p10,p11,p01].map(p=>p[0]))>width+45||Math.max(...[p00,p10,p11,p01].map(p=>p[1]))< -50||Math.min(...[p00,p10,p11,p01].map(p=>p[1]))>height+70)continue;
+      const neighbors={right:c+1<C&&platformMask[r*C+c+1],bottom:r+1<R&&platformMask[(r+1)*C+c],top:r>0&&platformMask[(r-1)*C+c],left:c>0&&platformMask[r*C+c-1]};
+      if(!neighbors.right)poly([p10,p11,project(x+S,y+S,-17),project(x+S,y,-17)],mixColor(mazeTheme.wall2,'#08112f',.6));
+      if(!neighbors.bottom)poly([p01,p11,project(x+S,y+S,-17),project(x,y+S,-17)],mixColor(mazeTheme.wall1,'#08112f',.53));
+      const floorColor=mixColor(mazeTheme.wall1,'#9db9ef',.40+(r%3)*.025);
+      poly([p00,p10,p11,p01],floorColor);
+      // Avoid seams between neighboring tiles; only exposed edges are highlighted.
+      ctx.lineWidth=2.8*scale;ctx.strokeStyle='rgba(127,205,255,.28)';ctx.beginPath();
+      if(!neighbors.top){ctx.moveTo(...p00);ctx.lineTo(...p10)}
+      if(!neighbors.left){ctx.moveTo(...p00);ctx.lineTo(...p01)}
+      ctx.stroke();
+    }
+    const [sx,sy]=cellPos(startCell),sp=project(sx,sy,0);
+    ctx.strokeStyle='#75baff';ctx.lineWidth=2.3;ctx.beginPath();ctx.ellipse(sp[0],sp[1],S*.28*scale,S*.20*scale,0,0,2*Math.PI);ctx.stroke();
+    for(const gem of crystals){if(gem.taken)continue;
+      const [x,y]=cellPos(gem.cell),pos=project(x,y,14+Math.sin(now*.003+gem.cell)*3),size=8*scale;
+      ctx.save();ctx.shadowColor='#ff45cb';ctx.shadowBlur=18*scale;
+      poly([[pos[0],pos[1]-size],[pos[0]+size*.7,pos[1]],[pos[0],pos[1]+size],[pos[0]-size*.7,pos[1]]],'#fa4cc6','#ffdbfa',.8);
+      ctx.restore();
+    }
+    const [gx,gy]=cellPos(goalCell),g=project(gx,gy,3),ready=crystals.every(c=>c.taken);
+    ctx.save();ctx.strokeStyle=ready?'#3cead8':'#fa6db7';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=ready?20:7;
+    ctx.lineWidth=3*scale;ctx.beginPath();ctx.ellipse(g[0],g[1],S*.31*scale,S*.23*scale,0,0,2*Math.PI);ctx.stroke();ctx.restore();
+    const shadow=project(px,py,0),marble=project(px,py,RAD);
+    ctx.save();ctx.fillStyle='rgba(4,7,19,.4)';ctx.beginPath();ctx.ellipse(shadow[0]+3*scale,shadow[1]+5*scale,10*scale,5*scale,0,0,2*Math.PI);ctx.fill();
+    ballSkin(ctx,marble[0],marble[1],RAD*scale,ballChoice,{glow:true});ctx.restore();
+    // Noninteractive, readable HUD in the dedicated playfield margin.
+    ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
+    ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
+  }
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);drawBall();ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
@@ -1227,8 +1379,8 @@
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
       px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,connected:true,hasSensor,sensorSource,sensorProblem,
-      tilt:currentTilt(),columns:C,rows:R}),
-    walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
+      tilt:currentTilt(),columns:C,rows:R,threeD:threeDActive(),crystals:crystals.map(c=>({...c})),falls:challengeFalls,platforms:platformMask?platformMask.reduce((n,x)=>n+x,0):0}),
+    walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,platformMask:()=>platformMask?Array.from(platformMask):null,route3D:()=>challengeRoute.slice(),onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
     onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}}),
     profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null,
     ball:()=>({...ballChoice}),chooseBall:(style,color)=>{ballChoice=normalizeBall({style,color});persistBallChoice();paintBallPicker()},
