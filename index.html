@@ -420,20 +420,22 @@
     body[data-ui-mode="night"] .board-dialog p{color:#b3c3dd}
     body[data-ui-mode="night"] .board-list li{color:#eaf2ff;border-color:#2c3a60}
     body[data-ui-mode="night"] .board-list li.me{background:#1d2c4d}
-    /* Zoom buttons: camera scale only. Physics, walls and scoring never read the zoom value. */
-    .zoom-ctl{position:absolute;z-index:3;top:10px;right:max(10px,env(safe-area-inset-right));display:flex;flex-direction:column;border:1px solid #c9d0e4;border-radius:12px;background:#ffffffe8;box-shadow:0 6px 18px #1a244a26;overflow:hidden;-webkit-tap-highlight-color:transparent}
-    .zoom-ctl.hidden{display:none}
-    .zoom-ctl button{width:44px;height:44px;padding:0;border:0;background:none;color:#12193a;font:600 24px/1 system-ui,sans-serif;touch-action:manipulation;cursor:pointer}
-    .zoom-ctl button:active{background:#e4e8f5}
-    .zoom-ctl button:disabled{opacity:.35}
-    .zoom-ctl .zoom-rotate{border-top:1px solid #dde1ee;font-size:21px}
-    .zoom-ctl .zoom-rotate[aria-pressed="true"]{background:#12193a;color:#fff}
-    body[data-ui-mode="night"] .zoom-ctl .zoom-rotate{border-color:#34436a}
-    body[data-ui-mode="night"] .zoom-ctl .zoom-rotate[aria-pressed="true"]{background:#e9eefc;color:#101a38}
-    .zoom-ctl .zoom-level{height:30px;border-top:1px solid #dde1ee;border-bottom:1px solid #dde1ee;font:700 11px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#4a557a;letter-spacing:0}
-    body[data-ui-mode="night"] .zoom-ctl{background:#101a36ee;border-color:#34436a}
-    body[data-ui-mode="night"] .zoom-ctl button{color:#eaf2ff}
-    body[data-ui-mode="night"] .zoom-ctl .zoom-level{color:#a9b8da;border-color:#34436a}
+    /* One view button: full maze <-> back to the ball. Camera only; physics and maze data never read it. */
+    .view-toggle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:140px;height:42px;padding:0 16px;border:0;border-radius:21px;background:#12193a;color:#fff;font:700 12px/1 "Avenir Next","Segoe UI",system-ui,sans-serif;letter-spacing:.09em;box-shadow:0 6px 16px #12193a33;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+    .view-toggle:active{transform:scale(.97)}
+    .view-toggle.hidden{display:none}
+    .view-toggle .ic-ball{display:none}
+    .view-toggle[aria-pressed="true"]{background:linear-gradient(90deg,#2879bd,#713b83 55%,#be2f70)}
+    .view-toggle[aria-pressed="true"] .ic-full{display:none}
+    .view-toggle[aria-pressed="true"] .ic-ball{display:block}
+    body[data-ui-mode="night"] .view-toggle{background:#e9eefc;color:#101a38;box-shadow:0 6px 16px #0006}
+    body[data-ui-mode="night"] .view-toggle[aria-pressed="true"]{color:#fff}
+    .bottom-bar{gap:8px}
+    /* Messages float just above the bar so they never cover the view button. */
+    .bottom-bar .toast{top:auto;bottom:calc(100% + 10px);transform:translate(-50%,8px)}
+    .bottom-bar .toast.show{transform:translate(-50%,0)}
+    html[data-look="new"] .bottom-bar{min-height:54px}
+    html[data-look="new"] .status{flex:1 1 0;min-width:0}
   </style>
 </head>
 <body>
@@ -456,15 +458,13 @@
 </header>
 <main class="playfield" id="playfield" aria-label="Maze play area">
   <canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
-  <div class="zoom-ctl" id="zoomCtl" role="group" aria-label="Maze zoom">
-    <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
-    <button type="button" id="zoomLevel" class="zoom-level" aria-label="Reset zoom" title="Reset zoom">100%</button>
-    <button type="button" id="zoomOut" aria-label="Zoom out">&minus;</button>
-    <button type="button" id="zoomRotate" class="zoom-rotate" aria-label="Rotate maze to portrait" aria-pressed="false" title="Rotate maze">&#10227;</button>
-  </div>
 </main>
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
+  <button type="button" class="view-toggle" id="viewToggle" aria-pressed="false" aria-label="Show the full maze">
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path class="ic-full" d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle class="ic-ball" cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+    <span id="viewToggleText">FULL MAZE</span>
+  </button>
   <details class="sensor-details" id="sensorDetails"><summary>RAW DATA</summary>
     <div class="sensor-panel" role="group" aria-label="Live device sensor values">
       <strong>Phone sensor diagnostics</strong>
@@ -677,13 +677,14 @@
   const cellPos=i=>[i%C*S+S/2,Math.floor(i/C)*S+S/2];
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
   let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
-  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,userZoom=1,camX=0,camY=0,userRotate=false;
-  // Rotated view (portrait phones): the maze is drawn turned 90 degrees counter-clockwise, so wide mazes fill the tall screen.
+  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,camX=0,camY=0,zoomFull=false;
+  // Rotated view: the maze is drawn turned 90 degrees counter-clockwise.
   // Maze data and physics stay in maze coordinates; only drawing and the tilt direction are rotated to match.
-  const rotated=()=>userRotate&&height>width&&!threeDActive();
+  // Full view of a wide maze on a tall screen turns the maze 90 degrees (when that makes it clearly bigger).
+  const fitUp=()=>Math.min(width/W,height/H),fitRot=()=>Math.min(width/H,height/W);
+  const rotated=()=>zoomFull&&height>width&&W>0&&!threeDActive()&&fitRot()>fitUp()*1.1;
   const viewW=()=>rotated()?height/zoom:width/zoom;
   const viewH=()=>rotated()?width/zoom:height/zoom;
-  const ZOOM_MAX=1.6,ZOOM_STEP=1.25;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
   let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
@@ -1124,7 +1125,7 @@
     return {connected:seen.every(x=>x===1),route:pathLength,platforms:platformMask.reduce((n,v)=>n+v,0)};
   }
   function loadLevel(nextIndex,nextMode=mode){
-    mode=nextMode;zoomFull=false; // every new maze starts in the normal view
+    mode=nextMode;
     if(mode==='classic'){levelIndex=clamp(nextIndex,0,unlocked);[C,R]=LEVELS[levelIndex];}
     else{specialIndex=clamp(nextIndex,0,SPECIALS.length-1);[C,R]=[SPECIALS[specialIndex].cols,SPECIALS[specialIndex].rows];}
     W=C*S;H=R*S;
@@ -1184,6 +1185,7 @@
     mctx.stroke();
   }
   function resetBall(){
+    zoomFull=false;zoom=baseZoom;viewLabels(); // every new maze, retry and restart starts in the normal view
     if(mode==='special'){
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
@@ -1205,43 +1207,31 @@
     // and only the view ahead grows, instead of silently zooming the maze in.
     if(LOOK==='new'&&portrait)zoom=Math.min(width/(S*PIN_CELLS_ACROSS),Math.max(width,height)/260);
     baseZoom=zoom;zoom=baseZoom*zoomMult();
-    restrictCamera();zoomLabels();}
-  // Player zoom: scales the camera only. The lowest zoom shows the whole maze at once ("FULL").
-  let zoomFull=false;
-  const zoomMin=()=>W>0&&H>0?Math.min(1,((rotated()?Math.min(width/H,height/W):Math.min(width/W,height/H))*.97)/baseZoom):.5;
-  const zoomMult=()=>zoomFull?zoomMin():clamp(userZoom,zoomMin(),ZOOM_MAX);
+    restrictCamera();}
+  // View toggle: "full maze" fits the whole maze on screen (turned 90 degrees when that is clearly bigger),
+  // "back to ball" returns to the normal follow view. Never remembered: every new maze or restart starts normal.
+  const zoomMult=()=>{
+    if(!zoomFull||!(W>0&&H>0))return 1;
+    return Math.min(1,(rotated()?fitRot():fitUp())*.97/baseZoom);
+  };
   function applyZoom(){
     zoom=baseZoom*zoomMult();
-    camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();zoomLabels();
+    camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();viewLabels();
   }
-  function setUserZoom(v){
-    const m=clamp(Math.round(v*1000)/1000,zoomMin(),ZOOM_MAX);
-    zoomFull=m<=zoomMin()+.001&&zoomMin()<1;
-    if(!zoomFull){userZoom=m;safeWrite('orbrinth-zoom-v12',String(m))} // the full-maze view is never remembered
+  function viewLabels(){
+    const b=$('viewToggle');
+    b.setAttribute('aria-pressed',String(zoomFull));
+    b.setAttribute('aria-label',zoomFull?'Back to the ball':'Show the full maze');
+    $('viewToggleText').textContent=zoomFull?'BACK TO BALL':'FULL MAZE';
+  }
+  function setFullView(on){
+    if(zoomFull===on)return;
+    zoomFull=on;
+    vx=vy=0;smoothX=smoothY=0; // tilt direction may change with the rotation: no leftover push
     applyZoom();
+    if(on&&!safeRead('orbrinth-fullview-hint-v12')){safeWrite('orbrinth-fullview-hint-v12','1');toast('Full view: the clock keeps running')}
   }
-  function zoomLabels(){
-    $('zoomLevel').textContent=zoomFull?'FULL':Math.round(zoomMult()*100)+'%';
-    $('zoomIn').disabled=!zoomFull&&zoomMult()>=ZOOM_MAX-.001;$('zoomOut').disabled=zoomFull;
-  }
-  function setupZoom(){
-    const saved=parseFloat(safeRead('orbrinth-zoom-v12'));
-    if(saved>=.6&&saved<=ZOOM_MAX)userZoom=saved; // far-out views are not carried into the next session
-    $('zoomIn').addEventListener('click',()=>setUserZoom(zoomMult()*ZOOM_STEP));
-    $('zoomOut').addEventListener('click',()=>setUserZoom(zoomMult()/ZOOM_STEP));
-    // Middle button: one tap shows the whole maze, the next tap returns to the normal view on the ball.
-    $('zoomLevel').addEventListener('click',()=>{if(zoomFull){userZoom=1;safeWrite('orbrinth-zoom-v12','1');setUserZoom(1)}else setUserZoom(0)});
-    userRotate=safeRead('orbrinth-rotate-v12')==='1';
-    $('zoomRotate').setAttribute('aria-pressed',String(userRotate));
-    $('zoomRotate').addEventListener('click',()=>{
-      userRotate=!userRotate;safeWrite('orbrinth-rotate-v12',userRotate?'1':'0');
-      $('zoomRotate').setAttribute('aria-pressed',String(userRotate));
-      vx=vy=0;smoothX=smoothY=0; // no leftover push from the old direction
-      applyZoom();
-    });
-    $('zoomLevel').setAttribute('aria-label','Show full maze or return to normal view');
-    $('zoomLevel').title='Show full maze / back to normal';
-  }
+  function setupZoom(){$('viewToggle').addEventListener('click',()=>setFullView(!zoomFull));viewLabels()}
   function restrictCamera(){let vw=viewW(),vh=viewH();camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
     if(threeDActive()){
@@ -1256,7 +1246,8 @@
   function toast(msg){let el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2450)}
   function updateControls(){
     $('calibrate').disabled=(phase==='intro');
-    $('zoomCtl').classList.toggle('hidden',phase==='intro'||threeDActive()); // 3D level keeps its own camera
+    // Hidden on the 3D level (own camera) and on fog levels (a full map would defeat the fog challenge).
+    $('viewToggle').classList.toggle('hidden',phase==='intro'||threeDActive()||fogActive());
     updateSensorStatus();
   }
   function updateSensorStatus(){
@@ -1839,7 +1830,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();if(rotated())ctx.transform(0,-zoom,zoom,0,-camY*zoom,(camX+viewW())*zoom);else{ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom)}ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();if(rotated())ctx.transform(0,-zoom,zoom,0,-camY*zoom,(camX+viewW())*zoom);else{ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom)}ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
