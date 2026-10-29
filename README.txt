@@ -43,3 +43,21 @@ TEST STATUS
   message, and ball physics response.
 - PHYSICAL gyro behaviour on a real user's Android/iPhone has not been
   tested here; actual support depends on device/browser/security policy.
+
+V12 look (local, not pushed)
+- New default look: one 48 px HUD row (level, time, pause, menu), a single menu for Home / Mazes / Style / Recalibrate / Restart, a one-screen home page, and a quiet tint outside the shaped mazes so the silhouette reads at play zoom.
+- "Use the classic look" on the home screen switches back to the V11.4 layout (stored in localStorage key orbrinth-look-v12).
+- Maze generation, collision, physics, tilt handling, scoring and profiles are untouched. Verified: all 15 mazes solvable, identical wall data, identical tilt replay in both looks.
+- Not tested on a real phone yet.
+
+Portrait update (local, not pushed)
+- Classic mazes are now tall (columns x rows from 19x33 up to 37x65). The ball starts bottom-left and the finish is a random cell on the top edge.
+- The finish column is drawn from the level seed, so it differs per level but is the same for every player (fair leaderboard).
+- Shaped mazes also start bottom-left and finish near the top. Circle (centre goal) and the 3D level are kept as they were.
+- The exit is an unmarked opening in the top wall (or silhouette edge for shapes): no marker, no arrow, you find the gap by playing. Set SHOW_FINISH=true in drawGoal to draw it again.
+- Rotate-to-portrait logic removed. Maze version bump resets old wide-maze times; leaderboard season is players_s2.
+- Verified in desktop Chromium only: solvability, goal on top row, deterministic tilt replay. Not tested on a real phone.
+
+Backup and recovery (local, not pushed)
+- Home screen: "Back up or restore my data". Save/load a .json backup of all local players, and (once the leaderboard is on) a recovery code that restores scores and unlocked mazes on a new phone.
+- Tested in desktop Chromium with a mocked database: code restore, backup save, wipe, backup load. Not tested against a real Firebase project or a real phone.

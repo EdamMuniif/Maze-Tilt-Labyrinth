@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#fdfbff">
   <meta name="description" content="ORBRINTH — Tilt Into the Unknown. Gyro-only maze with 10 classic levels, 5 original special shapes and one floating 3D challenge, customizable colors and persistent player records.">
-  <title>ORBRINTH V11.4 — Clean Logo | Maze Game</title>
+  <title>ORBRINTH: Tilt Into the Unknown</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ORBRINTH: Tilt Into the Unknown">
+  <meta property="og:description" content="A gyro-only maze game. Tilt your phone to roll the ball through 10 classic levels, 5 shaped mazes and a floating 3D challenge.">
+  <script>try{document.documentElement.dataset.look=localStorage.getItem('orbrinth-look-v12')==='classic'?'classic':'new'}catch(e){document.documentElement.dataset.look='new'}</script>
   <style>
     :root{color-scheme:light;--ink:#10182d;--quiet:#74809a;--blue:#146ddd;--violet:#774292;--pink:#d52a7f}
     *{box-sizing:border-box}
@@ -317,6 +321,127 @@
     /* Home-only appearance switch. Override the later flex rule and keep it hidden in other menus. */
     #appearancePicker.hidden,
     #overlay:not(.home-intro) #appearancePicker{display:none!important}
+
+    /* ===== V12 look: quiet chrome, same maze =====
+       Every rule is scoped to html[data-look="new"], so the classic layout stays one tap away
+       (home screen, "Use the classic look"). Layout and paint only: input, physics, generation
+       and scoring are not touched. */
+    .cta.link{display:none;width:auto;margin:6px auto 0;padding:8px 12px;border:0;background:none;color:#5266a0;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px;justify-content:center}
+    .home-intro .cta.link{display:flex}
+    body[data-ui-mode="night"] .cta.link{color:#a9c1ff}
+    html[data-look="new"] body{font-family:"Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Roboto,sans-serif}
+    html[data-look="new"] .topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-height:calc(48px + env(safe-area-inset-top));padding:env(safe-area-inset-top) max(6px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left));background:#fff;border-bottom:0}
+    html[data-look="new"] .topbar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,#2879bd,#365a9e 27%,#713b83 54%,#a32f80 76%,#be2f70)}
+    html[data-look="new"] .brand{flex:0 0 auto;padding:0;border:0;background:none;gap:0;box-shadow:none}
+    html[data-look="new"] .brand>div:last-child{display:none}
+    html[data-look="new"] .brandmark{width:20px;height:20px}
+    .who-stat{display:none}
+    html[data-look="new"] .who-stat{display:flex;flex-direction:column;min-width:0}
+    html[data-look="new"] .who-stat span{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b4306f}
+    html[data-look="new"] .hudright{flex:1 1 auto;min-width:0;width:auto;display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:14px;margin-left:6px}
+    html[data-look="new"] .hudright>.stat{flex:0 0 auto;min-width:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+    html[data-look="new"] .stat span{font-size:8.5px;letter-spacing:.17em;color:#7b86a3;font-weight:700}
+    html[data-look="new"] .stat strong{font:700 17px/1.15 ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;letter-spacing:0;color:#12193a;font-variant-numeric:tabular-nums}
+    html[data-look="new"] .tools{margin-left:auto;flex:0 0 auto;width:auto;gap:0;padding:0;border:0;background:none;box-shadow:none}
+    html[data-look="new"] .topbar .tools .tool{min-width:44px;width:44px;height:44px;flex:0 0 44px;border-radius:10px;font-size:16px;color:#26305a}
+    html[data-look="new"] .topbar .tools .tool:active,html[data-look="new"] .topbar .tools .tool[aria-expanded="true"]{background:#eceff8}
+    html[data-look="new"] .menu-tool .bars{display:block;width:18px;height:2px;margin:0 auto;background:currentColor;border-radius:1px;box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
+    html[data-look="new"] .hud-menu{position:absolute;z-index:4;top:calc(100% + 8px);right:max(8px,env(safe-area-inset-right));width:min(320px,calc(100vw - 16px));padding:12px;background:#fff;border:1px solid #dde1ee;border-radius:14px;box-shadow:0 20px 50px #151e4533}
+    html[data-look="new"] .hud-menu.hidden{display:none}
+    html[data-look="new"] .menu-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 10px;font-size:9.5px;font-weight:800;letter-spacing:.18em;color:#5d6888}
+    html[data-look="new"] .menu-head small{font-size:10px;letter-spacing:.02em;font-weight:600;color:#9a4f8b}
+    html[data-look="new"] .menu-info{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin-bottom:8px}
+    html[data-look="new"] .menu-info .profile-button{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;max-width:none;height:50px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb;color:#12193a;font-size:14px;font-weight:800;line-height:1.15}
+    html[data-look="new"] .menu-info .profile-button::before{content:"PLAYER";font-size:8.5px;letter-spacing:.17em;color:#7b86a3;font-weight:700;margin-bottom:3px}
+    html[data-look="new"] .menu-info .stat{display:flex;flex-direction:column;justify-content:center;min-width:0;height:50px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb}
+    html[data-look="new"] .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    html[data-look="new"] .menu-grid .tool{width:100%;min-width:0;height:48px;padding:0 12px;border:1px solid #dde1ee;border-radius:10px;background:#fff;color:#12193a;font-size:13px;font-weight:700;letter-spacing:0;text-align:left}
+    html[data-look="new"] .menu-grid .tool:active{background:#eceff8}
+    html[data-look="new"] .menu-grid .tool:disabled{opacity:.45}
+    html[data-look="new"] .menu-grid #restart{grid-column:1/-1;margin-top:4px;text-align:center;color:#a3263f;border-color:#efc6cf;background:#fff8f9}
+    html[data-look="new"] .bottom-bar{min-height:34px;justify-content:space-between;gap:8px;padding:4px max(10px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 4px) max(12px,env(safe-area-inset-left));border-top:1px solid #ececf3}
+    html[data-look="new"] .status{flex:1 1 auto;min-width:0;padding:0;background:none;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;font-size:9px;letter-spacing:.07em;color:#5b6483}
+    html[data-look="new"] .sensor-details summary{min-height:28px;padding:5px 9px;border-radius:8px;font-size:9px;background:#fff}
+    html[data-look="new"] .dialog{border-radius:18px;box-shadow:0 24px 70px #1a244a30}
+    html[data-look="new"] .cta{border-radius:12px}
+    html[data-look="new"] .cta.primary{position:relative;min-height:58px;padding:0 18px 0 20px;border:0;background:#12193a;color:#fff;font-size:16px;letter-spacing:.01em;box-shadow:0 12px 28px #12193a38}
+    html[data-look="new"] .cta.primary::after{content:"";flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0 7%,#7cc8ff 8% 22%,#2f6fe4 48%,#b5307e 100%);box-shadow:0 0 0 3px #ffffff26}
+    html[data-look="new"] .cta.primary .arrow{display:none}
+    html[data-look="new"] .cta.secondary{min-height:48px;border:1.5px solid #cdd3e6;background:transparent;color:#26305a}
+    html[data-look="new"] .home-intro .dialog{display:flex;flex-direction:column;padding:22px 18px 12px}
+    html[data-look="new"] .home-intro .home-hero{order:1;margin-bottom:14px}
+    html[data-look="new"] .home-intro .copy{display:none}
+    html[data-look="new"] .home-intro .profile-entry{order:2;margin:0 0 12px;padding:0;border:0;background:none}
+    html[data-look="new"] .home-intro #tiltStart{order:3}
+    html[data-look="new"] .home-intro #preGameStyle{order:4}
+    html[data-look="new"] .home-intro .appearance-picker{order:5;margin:8px 0 0;padding:0;border:0;background:none}
+    html[data-look="new"] .home-intro .landscape-hint{order:6;margin:6px 0 0;color:#6b7694;font-weight:600}
+    html[data-look="new"] .home-intro #dialogFine{order:7;margin:8px 0 0;font-size:10.5px;color:#8a90a6}
+    html[data-look="new"] .home-intro #dialogFine.error{color:#b0214f;font-size:12px;font-weight:650}
+    html[data-look="new"] .home-intro #lookToggle{order:8}
+    html[data-look="new"] .profile-entry label{font-size:9.5px;letter-spacing:.17em;color:#7b86a3}
+    html[data-look="new"] .profile-entry input{height:50px;padding:0 14px;border:1.5px solid #c8cfe2;border-radius:10px;font-size:17px}
+    html[data-look="new"] .profile-entry input:focus{outline:0;border-color:#2879bd;box-shadow:0 0 0 3px #2879bd24}
+    html[data-look="new"] .appearance-options button{min-width:64px;padding:8px 10px}
+    html[data-look="new"] .level-tile,html[data-look="new"] .special-tile{border-radius:10px}
+    @media (orientation:landscape) and (max-height:560px){
+      html[data-look="new"] .home-intro .dialog{padding:10px 18px}
+      html[data-look="new"] .cta.primary{min-height:44px}
+      html[data-look="new"] .cta.secondary{min-height:38px}
+    }
+    html[data-look="new"] body[data-ui-mode="night"] .topbar,html[data-look="new"] body[data-ui-mode="night"] .bottom-bar{background:#0f1830;border-color:#243257}
+    html[data-look="new"] body[data-ui-mode="night"] .stat strong{color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .stat span{color:#8fa1c8}
+    html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool{color:#d6e5fa}
+    html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool:active,html[data-look="new"] body[data-ui-mode="night"] .topbar .tools .tool[aria-expanded="true"]{background:#223256}
+    html[data-look="new"] body[data-ui-mode="night"] .hud-menu{background:#162240;border-color:#34436a}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-head{color:#9fb0d6}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-info .profile-button,html[data-look="new"] body[data-ui-mode="night"] .menu-info .stat{background:#1d2c4d;border-color:#34436a;color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-grid .tool{background:#1d2c4d;border-color:#34436a;color:#eaf2ff}
+    html[data-look="new"] body[data-ui-mode="night"] .menu-grid #restart{background:#3a1d2c;border-color:#6a2c45;color:#ffb1c3}
+    html[data-look="new"] body[data-ui-mode="night"] .status{color:#a9b8da}
+    html[data-look="new"] body[data-ui-mode="night"] .cta.primary{background:#e9eefc;color:#101a38;box-shadow:0 12px 28px #0007}
+    html[data-look="new"] body[data-ui-mode="night"] .cta.secondary{background:transparent;border-color:#46567e;color:#e5edff}
+    html[data-look="new"] body[data-ui-mode="night"] .profile-entry input{border-color:#586984}
+    .cta.board-open{display:none}
+    .home-intro .cta.board-open:not(.hidden){display:flex}
+    html[data-look="new"] .home-intro #boardOpen{order:4}
+    .board-dialog{width:min(96vw,430px);max-height:min(92dvh,640px);padding:22px;overflow:auto}
+    .board-dialog h2{margin:12px 0 6px;color:#172145;font-size:25px;letter-spacing:-.045em}
+    .board-dialog p{font-size:12px;color:#65708b;line-height:1.45;margin:0 0 12px}
+    .board-list{list-style:none;margin:0 0 10px;padding:0}
+    .board-list li{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-bottom:1px solid #e6e9f3;color:#12193a;font-size:15px;font-weight:700}
+    .board-list li:first-child{border-top:1px solid #e6e9f3}
+    .board-list .rk{font:700 13px/1 ui-monospace,Menlo,Consolas,monospace;color:#7b86a3}
+    .board-list .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .board-list .pt{font:700 15px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+    .board-list li.me{background:#eef3ff;border-radius:8px;border-bottom-color:transparent}
+    .board-list li.me .nm::after{content:" · you";font-weight:600;color:#5266a0}
+    .board-list li.top1 .rk{color:#b8860b}
+    .rec-code{margin:0 0 10px;padding:12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb;color:#12193a;text-align:center;font:700 16px/1.2 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.06em;user-select:all;-webkit-user-select:all}
+    .rec-input{display:block;width:100%;box-sizing:border-box;margin:10px 0;padding:12px;border:1px solid #dde1ee;border-radius:10px;background:#fff;color:#12193a;font:600 15px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;text-transform:uppercase}
+    .board-dialog .skin-finish,.board-dialog .skin-back-home{margin-top:8px}
+    body[data-ui-mode="night"] .rec-code,body[data-ui-mode="night"] .rec-input{background:#1d2c4d;border-color:#2c3a60;color:#eaf2ff}
+    .board-status{min-height:18px;text-align:center}
+    body[data-ui-mode="night"] .board-dialog h2{color:#eaf2ff}
+    body[data-ui-mode="night"] .board-dialog p{color:#b3c3dd}
+    body[data-ui-mode="night"] .board-list li{color:#eaf2ff;border-color:#2c3a60}
+    body[data-ui-mode="night"] .board-list li.me{background:#1d2c4d}
+    /* One view button: full maze <-> back to the ball. Camera only; physics and maze data never read it. */
+    .view-toggle{position:absolute;right:12px;bottom:calc(100% + 12px);z-index:4;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#12193a;box-shadow:none;opacity:.8;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;transition:transform .12s,opacity .12s}
+    .view-toggle:active{transform:scale(.92);opacity:1}
+    .view-toggle.hidden{display:none}
+    .view-toggle svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+    .view-toggle .ic-in{display:none}
+    .view-toggle[aria-pressed="true"] .ic-out{display:none}
+    .view-toggle[aria-pressed="true"] .ic-in{display:block}
+    body[data-ui-mode="night"] .view-toggle{background:rgba(16,26,56,.55);color:#e9eefc}
+    .bottom-bar{gap:8px}
+    /* Messages float just above the bar so they never cover the view button. */
+    .bottom-bar .toast{top:auto;bottom:calc(100% + 10px);transform:translate(-50%,8px)}
+    .bottom-bar .toast.show{transform:translate(-50%,0)}
+    html[data-look="new"] .bottom-bar{min-height:54px}
+    html[data-look="new"] .status{flex:1 1 0;min-width:0}
   </style>
 </head>
 <body>
@@ -325,6 +450,7 @@
   <div class="hudright">
     <div class="stat level-stat"><span>LEVEL</span><strong id="levelLabel">01 / 10</strong></div>
     <div class="stat"><span>TIME</span><strong id="clock">00:00</strong></div>
+    <div class="stat who-stat" id="whoStat"><span id="whoName">PLAYER</span><strong id="whoScore">0</strong></div>
     <div class="stat record-stat"><span>BEST SCORE</span><strong id="highScore">0</strong></div>
     <button id="profileButton" class="profile-button" title="Switch player" aria-label="Switch player">PLAYER</button>
     <div class="tools">
@@ -338,10 +464,13 @@
   </div>
 </header>
 <main class="playfield" id="playfield" aria-label="Maze play area">
-  <canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
+  <canvas id="game" aria-label="Top-down maze. Roll the ball from the start at the bottom left up to a hidden exit on the top edge."></canvas>
 </main>
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
+  <button type="button" class="view-toggle" id="viewToggle" aria-pressed="false" aria-label="Show the full maze">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g class="ic-out"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></g><g class="ic-in"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></g></svg>
+  </button>
   <details class="sensor-details" id="sensorDetails"><summary>RAW DATA</summary>
     <div class="sensor-panel" role="group" aria-label="Live device sensor values">
       <strong>Phone sensor diagnostics</strong>
@@ -391,7 +520,40 @@
     <button class="cta secondary" id="chooseLevel">Choose mazes <span class="arrow" aria-hidden="true">→</span></button>
     <button class="cta secondary hidden" id="dialogHome" type="button">⌂ Home <span class="arrow" aria-hidden="true">↖</span></button>
     <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
+    <button class="cta secondary board-open hidden" id="boardOpen" type="button">Leaderboard <span class="arrow" aria-hidden="true">★</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
+    <button class="cta link" id="dataOpen" type="button">Back up or restore my data</button>
+    <button class="cta link" id="lookToggle" type="button"></button>
+  </section>
+</div>
+<div class="shade skin-shade hidden" id="boardOverlay" role="dialog" aria-modal="true" aria-labelledby="boardTitle">
+  <section class="dialog board-dialog">
+    <div class="eyebrow">LEADERBOARD</div>
+    <h2 id="boardTitle" tabindex="-1">Top players</h2>
+    <p>Everyone plays the same mazes. Ranked by total points, best score per maze.</p>
+    <ol class="board-list" id="boardList"></ol>
+    <p class="board-status" id="boardStatus" role="status"></p>
+    <button id="boardRefresh" class="skin-finish" type="button">Refresh</button>
+    <button id="boardClose" class="skin-back-home" type="button">Close</button>
+  </section>
+</div>
+<div class="shade skin-shade hidden" id="dataOverlay" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+  <section class="dialog board-dialog">
+    <div class="eyebrow">YOUR DATA</div>
+    <h2 id="dataTitle" tabindex="-1">Back up &amp; restore</h2>
+    <p>Your progress lives in this browser. Save a backup file now and then, so a new phone or cleared browser never costs you your scores.</p>
+    <div id="recSection" class="hidden">
+      <p><strong>Recovery code.</strong> Keep it somewhere safe. On a new phone, enter it to get your scores and unlocked mazes back from the online board.</p>
+      <div class="rec-code" id="recCode" aria-live="polite"></div>
+      <button id="recCopy" class="skin-finish" type="button">Copy code</button>
+      <input id="recInput" class="rec-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ORB-XXXX-XXXX-XXXX-XXXX" aria-label="Recovery code">
+      <button id="recRestore" class="skin-finish" type="button">Restore from code</button>
+    </div>
+    <button id="backupSave" class="skin-finish" type="button">Save backup file</button>
+    <button id="backupLoad" class="skin-finish" type="button">Load backup file</button>
+    <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
+    <p class="board-status" id="dataStatus" role="status"></p>
+    <button id="dataClose" class="skin-back-home" type="button">Close</button>
   </section>
 </div>
 <div class="shade skin-shade hidden" id="skinOverlay" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
@@ -478,8 +640,8 @@
   function paintFog(){
     if(!fogActive()||!fogVisible)return;
     // In world coordinates, cull to the visible camera window for mobile efficiency.
-    const minC=clamp(Math.floor(camX/S)-1,0,C-1),maxC=clamp(Math.ceil((camX+width/zoom)/S)+1,0,C-1);
-    const minR=clamp(Math.floor(camY/S)-1,0,R-1),maxR=clamp(Math.ceil((camY+height/zoom)/S)+1,0,R-1);
+    const minC=clamp(Math.floor(camX/S)-1,0,C-1),maxC=clamp(Math.ceil((camX+viewW())/S)+1,0,C-1);
+    const minR=clamp(Math.floor(camY/S)-1,0,R-1),maxR=clamp(Math.ceil((camY+viewH())/S)+1,0,R-1);
     const limit=fogDepthForLevel();
     for(let r=minR;r<=maxR;r++)for(let c=minC;c<=maxC;c++){
       const i=r*C+c,depth=fogVisible[i];
@@ -493,7 +655,7 @@
     }
   }
 
-  const LEVELS=[[33,19],[35,21],[39,23],[43,25],[45,27],[49,29],[53,31],[57,33],[61,35],[65,37]];
+  const LEVELS=[[19,33],[21,35],[23,39],[25,43],[27,45],[29,49],[31,53],[33,57],[35,61],[37,65]]; // [columns, rows]: tall, portrait mazes
   const SPECIALS=[{id:'circle',name:'Circle',hint:'Concentric rings & hidden turns',cols:27,rows:27},
     {id:'butterfly',name:'Butterfly',hint:'Symmetrical wings',cols:45,rows:39},
     {id:'cat',name:'Halloween Cat',hint:'Ears, body & curled tail',cols:42,rows:42},
@@ -504,12 +666,21 @@
   const N=1,E=2,SO=4,WE=8;
   const DIRS=[[0,-1,N,SO],[1,0,E,WE],[0,1,SO,N],[-1,0,WE,E]];
   const $=id=>document.getElementById(id);
+  // V12: 'new' = quiet chrome, pinned camera, tinted shape mazes. 'classic' = the V11.4 layout, unchanged.
+  const LOOK=document.documentElement.dataset.look==='classic'?'classic':'new';
+  // Everyone plays the same mazes, so scores are comparable. Change this number to start a new set of mazes.
+  const SHARED_SEED=424242;
+  // Online leaderboard (Firebase Firestore, REST). Fill in both values from LEADERBOARD_SETUP.md to switch it on.
+  // Without them the game works as before and the Leaderboard button stays hidden.
+  const BOARD={projectId:'',apiKey:'',collection:'players_s2'};
+  const BOARD_ON=!!(BOARD.projectId&&BOARD.apiKey);
+  const PIN_CELLS_ACROSS=11.7; // portrait camera: the on-screen cell size the V11.4 HUD produced on common phones
   const canvas=$('game'),playfield=$('playfield'),ctx=canvas.getContext('2d',{alpha:false});
   const overlay=$('overlay'),statusEl=$('status'),picker=$('levelPicker'),specialPicker=$('specialPicker'),pickerTabs=$('pickerTabs');
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mazeTexture=document.createElement('canvas');mazeTexture.width=W;mazeTexture.height=H;
   const mctx=mazeTexture.getContext('2d',{alpha:false});
-  let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0;
+  let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0,goalCol=0,outsideTint=null;
   let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null;
   // Independent floating platform topology, deliberately isolated from all existing five specials.
   const CRYSTAL_COUNT=4;
@@ -532,7 +703,8 @@
   const cellPos=i=>[i%C*S+S/2,Math.floor(i/C)*S+S/2];
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
   let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
-  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,camX=0,camY=0;
+  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,camX=0,camY=0,zoomFull=false;
+  const viewW=()=>width/zoom,viewH=()=>height/zoom;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
   let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
@@ -638,6 +810,8 @@
   function renderPlayerStats(){
     $('profileButton').textContent=playerProfile?.name||'PLAYER';
     $('highScore').textContent=Number(playerProfile?.highScore||0).toLocaleString('en-US');
+    $('whoName').textContent=(playerProfile?.name||'PLAYER').toUpperCase();
+    $('whoScore').textContent=Number(playerProfile?.highScore||0).toLocaleString('en-US');
   }
   function renderProfilePreview(){
     const name=cleanName($('playerName').value),p=profileForName(name),el=$('playerRecord');
@@ -673,7 +847,7 @@
   try{
     unlocked=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-unlocked'))||0,0,LEVELS.length-1);
     levelIndex=clamp(Number(localStorage.getItem('tilt-labyrinth-v4-level'))||0,0,unlocked);
-    courseSeed=Number(localStorage.getItem('tilt-labyrinth-v4-seed'))||0;
+    courseSeed=SHARED_SEED;
     levelResults=JSON.parse(localStorage.getItem('tilt-labyrinth-v4-bests')||'{}');
     specialResults=JSON.parse(localStorage.getItem('tilt-labyrinth-v5-special-bests')||'{}');
     mode=localStorage.getItem('tilt-labyrinth-v5-mode')==='special'?'special':'classic';
@@ -693,6 +867,14 @@
       }
     }
   }catch(_){profiles=Object.create(null)}
+  // Maze set version: best times from the old wide mazes mean nothing on the tall ones, so they reset once.
+  // Names, points and unlocked levels are kept.
+  const MAZE_VERSION='v2-portrait';
+  if(safeRead('orbrinth-maze-version')!==MAZE_VERSION){
+    for(const p of Object.values(profiles)){p.classicBest={};p.specialBest={}}
+    levelResults={};specialResults={};
+    safeWrite(PROFILE_STORE,JSON.stringify(profiles));safeWrite('orbrinth-maze-version',MAZE_VERSION);
+  }
   const storedActive=safeRead(ACTIVE_STORE)||'';
   if(profiles[storedActive]){$('playerName').value=profiles[storedActive].name;}
   if(!Object.keys(profiles).length){legacyProgress={unlocked,level:levelIndex,mode,specialIndex,classicBest:{...levelResults},specialBest:{...specialResults}}}
@@ -711,12 +893,12 @@
     $('levelLabel').textContent=mode==='classic'?`${String(levelIndex+1).padStart(2,'0')} / ${LEVELS.length}`:`S${specialIndex+1} / ${SPECIALS.length}`;
     document.querySelector('.brand small').textContent='TILT INTO THE UNKNOWN';
     best=Number(mode==='classic'?levelResults[levelIndex]:specialResults[specialIndex])||null;
-    canvas.setAttribute('aria-label',`Top-down ${currentName()} maze. Tilt your phone to move the ball toward the pink target.`);
+    canvas.setAttribute('aria-label',`Top-down ${currentName()} maze. Tilt your phone to move the ball up and out. The exit is hidden: find it.`);
     renderPlayerStats();
   }
 
   function randGen(input){let a=input>>>0;return ()=>{a+=0x6d2b79f5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
-  function buildMaze(input){
+  function buildMaze(input,goal){
     let random=randGen(input),walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),start=(R-1)*C,stack=[start];seen[start]=1;
     while(stack.length){
       let a=stack[stack.length-1],x=a%C,y=(a/C)|0,available=[];
@@ -730,7 +912,7 @@
       for(const [dx,dy,bit] of DIRS){let nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=C||ny>=R||(walls[a]&bit))continue;let b=ny*C+nx;if(dist[b]!==-1)continue;dist[b]=dist[a]+1;queue[tail++]=b}
     }
     let dead=0;for(let a=0;a<walls.length;a++){let open=4-((walls[a]&1)!==0)-((walls[a]&2)!==0)-((walls[a]&4)!==0)-((walls[a]&8)!==0);if(open===1)dead++}
-    return {walls,route:dist[C-1],connected:tail===C*R,dead};
+    return {walls,route:dist[goal],connected:tail===C*R,dead};
   }
 
   // Original shape silhouettes: only in-shape cells are playable.
@@ -801,7 +983,7 @@
     }
     return {dist,far,count:tail};
   }
-  function shapeTrial(mask,rngSeed){
+  function shapeTrial(mask,rngSeed,start,tops){
     const rng=randGen(rngSeed),walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R);
     const first=mask.indexOf(1),stack=[first];seen[first]=1;
     while(stack.length){const a=stack[stack.length-1],x=a%C,y=(a/C)|0,opts=[];
@@ -809,21 +991,29 @@
       if(!opts.length){stack.pop();continue}
       const [b,bit,op]=opts[(rng()*opts.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
     }
-    const one=bfsWalls(walls,mask,first),two=bfsWalls(walls,mask,one.far);
+    const reach=bfsWalls(walls,mask,start);
+    // Finish: a seeded pick among the three farthest cells of the top rows, so the route stays long.
+    const goal=[...tops].sort((a,b)=>reach.dist[b]-reach.dist[a]).slice(0,3)[(rng()*Math.min(3,tops.length))|0];
     let dead=0;for(let i=0;i<mask.length;i++)if(mask[i]){
       let openings=0;for(const [dx,dy,bit] of DIRS)if(!(walls[i]&bit))openings++;
       if(openings===1)dead++;
     }
-    return {walls,start:one.far,goal:two.far,route:two.dist[two.far],connected:two.count===mask.reduce((a,b)=>a+b,0),dead};
+    return {walls,start,goal,route:reach.dist[goal],connected:reach.count===mask.reduce((a,b)=>a+b,0),dead};
   }
   function buildShapeMaze(shape,randomSeed){
     const mask=getShapeMask(shape);let rng=randGen(randomSeed),bestTrial=null;
+    // Portrait rule: start at the bottom-left of the silhouette, finish near the top.
+    let top=R,bottom=-1;for(let i=0;i<mask.length;i++)if(mask[i]){const y=(i/C)|0;if(y<top)top=y;if(y>bottom)bottom=y}
+    let start=-1;for(let x=0;x<C&&start<0;x++)if(mask[bottom*C+x])start=bottom*C+x;
+    const tops=[];for(let i=0;i<mask.length;i++){const yy=(i/C)|0;if(mask[i]&&yy<=top+3&&(yy===0||!mask[i-C]))tops.push(i)}
+    if(!tops.length)for(let i=0;i<mask.length;i++)if(mask[i]&&((i/C)|0)<=top+1)tops.push(i);
     for(let i=0;i<9;i++){
-      const trial=shapeTrial(mask,(rng()*0xffffffff)>>>0||1);
+      const trial=shapeTrial(mask,(rng()*0xffffffff)>>>0||1,start,tops);
       if(!trial.connected)throw Error('Special shape maze disconnected');
       if(!bestTrial||trial.route>bestTrial.route)bestTrial=trial;
     }
     activeMask=mask;grid=bestTrial.walls;startCell=bestTrial.start;goalCell=bestTrial.goal;
+    {const g=bestTrial.goal;if(g<C||!mask[g-C])grid[g]&=~N;} // exit opening in the silhouette edge
     pathLength=bestTrial.route;deadEnds=bestTrial.dead;roundMode=false;roundGeom=null;
   }
   function polarPoint(r,a){const c=roundGeom.center;return [c+Math.cos(a)*r,c+Math.sin(a)*r]}
@@ -883,8 +1073,19 @@
       }
     }
   }
+  // V12: outside the silhouette gets a quiet tint so the shape reads at play zoom. The inside keeps the
+  // theme floor, so wall-to-floor contrast where the ball actually rolls is exactly what it was.
+  function paintShapeField(){
+    outsideTint=mixColor(mazeTheme.floor,mazeTheme.wall1,.15);
+    mctx.fillStyle=outsideTint;mctx.fillRect(0,0,W,H);
+    mctx.fillStyle=mazeTheme.floor;
+    if(roundMode&&roundGeom){mctx.beginPath();mctx.arc(roundGeom.center,roundGeom.center,roundGeom.outer,0,Math.PI*2);mctx.fill()}
+    else if(activeMask){for(let y=0;y<R;y++)for(let x=0;x<C;x++)if(inMask(x,y))mctx.fillRect(x*S-.4,y*S-.4,S+.8,S+.8)}
+    else outsideTint=null;
+  }
   function paintSpecialMaze(){
     mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
+    outsideTint=null;if(LOOK==='new')paintShapeField();
     const gradient=mctx.createLinearGradient(0,H,W,0);
     gradient.addColorStop(0,mazeTheme.wall1);gradient.addColorStop(1,mazeTheme.wall2);
     mctx.lineWidth=T;mctx.lineJoin='round';mctx.lineCap='round';mctx.strokeStyle=gradient;
@@ -971,10 +1172,13 @@
     // for every level. Restart does NOT change the active maze.
     const identity=mode==='classic'?levelIndex+1:100+specialIndex;
     const levelRandom=randGen((courseSeed ^ Math.imul(identity,0x9e3779b9))>>>0);
+    // The finish is a random cell on the top row, drawn from the level's seed: different on every level,
+    // identical for every player, so scores stay comparable.
+    goalCol=mode==='classic'?Math.min(C-1,(levelRandom()*C)|0):0;
     let candidate=null,chosenSeed=0;
     for(let i=0;i<(mode==='classic'?40:0);i++){
       const trialSeed=(levelRandom()*0xffffffff)>>>0||1;
-      const trial=buildMaze(trialSeed);
+      const trial=buildMaze(trialSeed,goalCol);
       if(!trial.connected||trial.route<0)throw new Error('Maze connectivity invariant failed');
       if(!candidate||trial.route>candidate.route){candidate=trial;chosenSeed=trialSeed}
       if(candidate.route>=(C*R*.45))break;
@@ -982,6 +1186,7 @@
     if(mode==='classic'){
       activeMask=null;roundMode=false;roundGeom=null;
       grid=candidate.walls;pathLength=candidate.route;deadEnds=candidate.dead;seed=chosenSeed;
+      grid[goalCol]&=~N; // the exit: an opening in the top wall, visible from the start, never marked
       paintMaze();
     }else{
       const shapeSeed=((levelRandom()*0xffffffff)>>>0)||1;seed=shapeSeed;
@@ -1003,6 +1208,7 @@
     if(width&&height)resize();
   }
   function paintMaze(){
+    outsideTint=null;
     mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
     if(mazeTheme.id==='classic'){const wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H)}
     const gradient=mctx.createLinearGradient(0,H,W,0);
@@ -1021,6 +1227,7 @@
     mctx.stroke();
   }
   function resetBall(){
+    zoomFull=false;zoom=baseZoom;viewLabels(); // every new maze, retry and restart starts in the normal view
     if(mode==='special'){
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
@@ -1032,20 +1239,47 @@
     }
     vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
     ballQuat=[1,0,0,0];rollingDistance=0;initFog();
-    updateClock();camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();}
+    updateClock();camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();}
   function resize(){width=playfield.clientWidth;height=playfield.clientHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
     const portrait=height>width;
     zoom=Math.max(width/(S*(portrait?12.5:23)),height/(S*Math.min(R,portrait?21:15)));
     zoom=Math.min(zoom,Math.max(width,height)/260); // keep ball and walls navigable on small screens
+    // V12: a slimmer HUD gives the canvas more height. Pin the width so cells stay the same size on screen
+    // and only the view ahead grows, instead of silently zooming the maze in.
+    if(LOOK==='new'&&portrait)zoom=Math.min(width/(S*PIN_CELLS_ACROSS),Math.max(width,height)/260);
+    baseZoom=zoom;zoom=baseZoom*zoomMult();
     restrictCamera();}
-  function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
+  // View toggle: "full maze" fits the whole maze on screen,
+  // "back to ball" returns to the normal follow view. Never remembered: every new maze or restart starts normal.
+  const zoomMult=()=>{
+    if(!zoomFull||!(W>0&&H>0))return 1;
+    return Math.min(1,Math.min(width/W,height/H)*.97/baseZoom);
+  };
+  function applyZoom(){
+    zoom=baseZoom*zoomMult();
+    camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();viewLabels();
+  }
+  function viewLabels(){
+    const b=$('viewToggle');
+    b.setAttribute('aria-pressed',String(zoomFull));
+    b.setAttribute('aria-label',zoomFull?'Back to the ball':'Show the full maze');
+  }
+  function setFullView(on){
+    if(zoomFull===on)return;
+    zoomFull=on;
+    vx=vy=0;smoothX=smoothY=0; // tilt direction may change with the rotation: no leftover push
+    applyZoom();
+    if(on&&!safeRead('orbrinth-fullview-hint-v12')){safeWrite('orbrinth-fullview-hint-v12','1');toast('Full view: the clock keeps running')}
+  }
+  function setupZoom(){$('viewToggle').addEventListener('click',()=>setFullView(!zoomFull));viewLabels()}
+  function restrictCamera(){let vw=viewW(),vh=viewH();camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
     if(threeDActive()){
       const follow=1-Math.exp(-dt*5.5);isoCamX+=(px+S*3.4-isoCamX)*follow;isoCamY+=(py-S*1.5-isoCamY)*follow;
       return;
     }
-    const vw=width/zoom,vh=height/zoom;
+    const vw=viewW(),vh=viewH();
     const targetX=W>vw?clamp(px-vw/2,0,W-vw):(W-vw)/2;
     const targetY=H>vh?clamp(py-vh/2,0,H-vh):(H-vh)/2;
     const f=1-Math.exp(-dt*8);camX+=(targetX-camX)*f;camY+=(targetY-camY)*f;}
@@ -1053,6 +1287,8 @@
   function toast(msg){let el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2450)}
   function updateControls(){
     $('calibrate').disabled=(phase==='intro');
+    // Hidden on the 3D level (own camera) and on fog levels (a full map would defeat the fog challenge).
+    $('viewToggle').classList.toggle('hidden',phase==='intro'||threeDActive()||fogActive());
     updateSensorStatus();
   }
   function updateSensorStatus(){
@@ -1168,7 +1404,8 @@
     },6500);
   }
   function launch(){phase='playing';$('preGameStyle').classList.add('hidden');overlay.classList.add('hidden');picker.classList.add('hidden');specialPicker.classList.add('hidden');pickerTabs.classList.add('hidden');$('tiltStart').classList.remove('hidden');
-    resetBall();updateControls();tLast=performance.now()}
+    resetBall();updateControls();tLast=performance.now();
+    if(LOOK==='new'&&fogActive()&&!safeRead('orbrinth-fog-hint-v12')){safeWrite('orbrinth-fog-hint-v12','1');setTimeout(()=>{if(phase==='playing')toast('Fog level: only the corridors near the ball are visible')},2900)}}
   function showDialog(title,eyebrow,copy,primaryLabel,secondaryLabel){
     overlay.classList.remove('home-intro');$('appearancePicker').classList.add('hidden');
     $('profileEntry').classList.add('hidden');
@@ -1192,7 +1429,7 @@
       else specialResults[specialIndex]=Number(elapsed.toFixed(2));}
     const isFinal=currentNumber()===currentTotal();
     if(mode==='classic'&&!isFinal)unlocked=Math.max(unlocked,levelIndex+1);
-    saveProgress();
+    saveProgress();renderPlayerStats();boardRecord(scoreKey.replace('classic:','c').replace('special:','s'),earned);
     showDialog(isFinal?'CHALLENGE <span class="gradient">CLEARED.</span>':'MAZE <span class="gradient">COMPLETE.</span>',
       `${currentName().toUpperCase()} COMPLETE`,
       `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${threeDActive()?`${challengeFalls} falls and all four crystals`: `${bumpCount} wall contacts`}. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
@@ -1366,15 +1603,18 @@
     }
     rollBall(px-rollingFromX,py-rollingFromY);updateFogSight();
     trailTimer+=dt;if(trailTimer>.033){trailTimer=0;trail.push([px,py]);if(trail.length>22)trail.shift()}
-    const goal=mode==='classic'?[W-S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
+    const goal=goalPos();
     if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
+  const goalPos=()=>mode==='classic'?[goalCol*S+S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
+  // The finish ring is drawn so players can see where to go. Set SHOW_FINISH to false for a hidden-exit mode.
+  const SHOW_FINISH=true;
   function drawGoal(time){
-    const [x,y]=mode==='classic'?[W-S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
-    ctx.save();
+    const [x,y]=goalPos();
+    if(SHOW_FINISH){ctx.save();
     let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,rgba(mazeTheme.finish,.28));aura.addColorStop(1,rgba(mazeTheme.finish,0));ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
     ctx.strokeStyle=mazeTheme.finish;ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
-    ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();
+    ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();}
     const [sx,sy]=mode==='classic'?[S/2,H-S/2]:roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
   }
   function drawRollingSurface(context,r,style,color){
@@ -1633,7 +1873,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
@@ -1665,10 +1905,216 @@
   window.addEventListener('resize',resize);
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(playfield);
   screen.orientation?.addEventListener?.('change',()=>{pendingCalibration=true;baseline=null;toast('Screen turned — recalibrating')});
+  // ---- Leaderboard (V12) ----
+  // One Firestore document per player per device: players_s1/<deviceId>_<profile>. Points come from the same
+  // scoreLevel() as before. Scores never leave the device unless BOARD is configured.
+  const BOARD_STORE='orbrinth-board-v2';
+  const boardData=(()=>{try{const d=JSON.parse(safeRead(BOARD_STORE)||'{}');return{device:String(d.device||''),players:d.players&&typeof d.players==='object'?d.players:{}}}catch(_){return{device:'',players:{}}}})();
+  if(!/^[0-9a-f]{16}$/.test(boardData.device)){
+    const a=new Uint8Array(8);if(globalThis.crypto?.getRandomValues)crypto.getRandomValues(a);else for(let i=0;i<8;i++)a[i]=Math.random()*256;
+    boardData.device=[...a].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const boardSave=()=>safeWrite(BOARD_STORE,JSON.stringify(boardData));
+  const boardApi=path=>`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(BOARD.projectId)}/databases/(default)/documents${path}?key=${encodeURIComponent(BOARD.apiKey)}`;
+  const boardDocId=key=>`${boardData.device}_${String(key).replace(/[^a-z0-9]/gi,'').slice(0,24)||'p'}`;
+  const boardMine=()=>boardData.players[activePlayerKey]||(boardData.players[activePlayerKey]={name:'',scores:{},synced:-1});
+  const boardTotal=m=>Object.values(m.scores).reduce((a,n)=>a+(Number(n)||0),0);
+  function boardFetch(url,options){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
+    return fetch(url,{...options,signal:ctl.signal}).finally(()=>clearTimeout(timer));
+  }
+  // Sends every local player whose total changed since the last successful upload (also catches offline wins).
+  async function boardSync(){
+    if(!BOARD_ON)return;
+    for(const [key,mine] of Object.entries(boardData.players)){
+      const total=boardTotal(mine);
+      if(total>0&&total!==mine.synced)await boardSend(key,mine,total);
+    }
+  }
+  async function boardSend(key,mine,total){
+    const fields={name:{stringValue:String(mine.name||'Player').slice(0,16)},total:{integerValue:String(total)},
+      scores:{mapValue:{fields:Object.fromEntries(Object.entries(mine.scores).map(([k,v])=>[k,{integerValue:String(Math.round(v))}]))}},
+      updatedAt:{timestampValue:new Date().toISOString()}};
+    try{
+      const res=await boardFetch(boardApi(`/${BOARD.collection}/${boardDocId(key)}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});
+      if(res.ok){mine.synced=total;boardSave()}
+    }catch(_){/* Offline: it syncs on the next win or when the board is opened. */}
+  }
+  function boardRecord(key,earned){
+    if(!BOARD_ON||!playerProfile)return;
+    const mine=boardMine();mine.name=playerProfile.name;mine.scores[key]=Math.max(Number(mine.scores[key])||0,earned);boardSave();boardSync();
+  }
+  async function boardLoad(){
+    const list=$('boardList'),status=$('boardStatus');
+    list.textContent='';status.textContent='Loading…';
+    await boardSync();
+    try{
+      const res=await boardFetch(boardApi(':runQuery'),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({structuredQuery:{from:[{collectionId:BOARD.collection}],orderBy:[{field:{fieldPath:'total'},direction:'DESCENDING'}],limit:25}})});
+      if(!res.ok)throw new Error('http '+res.status);
+      const rows=(await res.json()).filter(r=>r.document).map(r=>({id:r.document.name.split('/').pop(),name:r.document.fields?.name?.stringValue||'Player',total:Number(r.document.fields?.total?.integerValue)||0}));
+      if(!rows.length){status.textContent='No scores yet. Finish a maze to be first.';return}
+      rows.forEach((r,i)=>{
+        const li=document.createElement('li');if(r.id.startsWith(boardData.device+'_'))li.className='me';if(i===0)li.classList.add('top1');
+        const rk=document.createElement('span'),nm=document.createElement('span'),pt=document.createElement('span');
+        rk.className='rk';rk.textContent=String(i+1);nm.className='nm';nm.textContent=r.name;pt.className='pt';pt.textContent=r.total.toLocaleString('en-US');
+        li.append(rk,nm,pt);list.appendChild(li);
+      });
+      status.textContent='';
+    }catch(_){status.textContent='Can\u2019t reach the leaderboard. Check your connection and tap Refresh.'}
+  }
+  function setupBoard(){
+    if(!BOARD_ON)return;
+    $('boardOpen').classList.remove('hidden');
+    const note=document.querySelector('.profile-entry small');
+    if(note)note.textContent='Use a nickname, not your full name. Your name and points are shown on the leaderboard.';
+    $('boardOpen').addEventListener('click',()=>{$('boardOverlay').classList.remove('hidden');$('boardTitle').focus();boardLoad()});
+    $('boardRefresh').addEventListener('click',boardLoad);
+    $('boardClose').addEventListener('click',()=>$('boardOverlay').classList.add('hidden'));
+    boardSync();
+  }
+
+  // Backup and restore. A backup file holds every local profile plus the board identity. The recovery code is the
+  // board device id; with it a new phone can pull scores and unlocked mazes back from the online board.
+  const recFormat=id=>'ORB-'+id.toUpperCase().match(/.{4}/g).join('-');
+  const recParse=text=>{const h=String(text||'').toLowerCase().replace(/^orb/,'').replace(/[^0-9a-f]/g,'');return /^[0-9a-f]{16}$/.test(h)?h:''};
+  function absorbProfile(raw,name){
+    const key=profileKey(name||raw?.name);if(!key)return;
+    const inc=normalizeProfile(raw,name||raw?.name),cur=profiles[key];
+    if(!cur){profiles[key]=inc;return}
+    for(const [k,v] of Object.entries(inc.scores))cur.scores[k]=Math.max(Number(cur.scores[k])||0,v);
+    for(const [dst,src] of [[cur.classicBest,inc.classicBest],[cur.specialBest,inc.specialBest]])
+      for(const [k,v] of Object.entries(src))if(!(Number(dst[k])<=Number(v)))dst[k]=v;
+    cur.unlocked=Math.max(cur.unlocked,inc.unlocked);
+    cur.highScore=Math.max(0,...Object.values(cur.scores).map(Number));
+  }
+  function persistRestored(){safeWrite(PROFILE_STORE,JSON.stringify(profiles));boardSave()}
+  function setupData(){
+    const status=msg=>{$('dataStatus').textContent=msg};
+    const open=()=>{
+      status('');
+      if(BOARD_ON){$('recSection').classList.remove('hidden');$('recCode').textContent=recFormat(boardData.device)}
+      $('dataOverlay').classList.remove('hidden');$('dataTitle').focus();
+    };
+    $('dataOpen').addEventListener('click',open);
+    $('dataClose').addEventListener('click',()=>$('dataOverlay').classList.add('hidden'));
+    $('recCopy').addEventListener('click',async()=>{
+      const code=recFormat(boardData.device);
+      try{await navigator.clipboard.writeText(code);status('Code copied.')}
+      catch(_){const r=document.createRange();r.selectNodeContents($('recCode'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);status('Select and copy the code above.')}
+    });
+    $('backupSave').addEventListener('click',()=>{
+      if(playerProfile)saveProfiles();
+      const data={app:'orbrinth',backup:1,mazeVersion:MAZE_VERSION,exported:new Date().toISOString(),profiles,board:{device:boardData.device,players:boardData.players}};
+      const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download=`orbrinth-backup-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+      status('Backup file saved. Keep it somewhere safe.');
+    });
+    $('backupLoad').addEventListener('click',()=>$('backupFile').click());
+    $('backupFile').addEventListener('change',async e=>{
+      const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+      try{
+        const d=JSON.parse(await f.text());
+        if(d?.app!=='orbrinth'||!d.profiles||typeof d.profiles!=='object')throw new Error('not a backup');
+        if(d.mazeVersion!==MAZE_VERSION){status('This backup is from a different maze version and can’t be loaded.');return}
+        let n=0;
+        for(const p of Object.values(d.profiles)){if(p&&p.name){absorbProfile(p,p.name);n++}}
+        const b=d.board;
+        if(b&&/^[0-9a-f]{16}$/.test(b.device||'')){
+          boardData.device=b.device;
+          for(const [k,m] of Object.entries(b.players||{})){
+            const mine=boardData.players[k]||(boardData.players[k]={name:m.name||'',scores:{},synced:-1});
+            mine.name=m.name||mine.name;
+            for(const [sk,v] of Object.entries(m.scores||{}))mine.scores[sk]=Math.max(Number(mine.scores[sk])||0,Number(v)||0);
+            mine.synced=-1;
+          }
+        }
+        persistRestored();status(`Restored ${n} player${n===1?'':'s'}. Reloading…`);setTimeout(()=>location.reload(),900);
+      }catch(_){status('That file isn’t an ORBRINTH backup.')}
+    });
+    $('recRestore').addEventListener('click',async()=>{
+      const dev=recParse($('recInput').value);
+      if(!dev){status('That code doesn’t look right. It starts with ORB- and has 16 characters.');return}
+      status('Looking for your scores…');
+      const doc=`projects/${BOARD.projectId}/databases/(default)/documents/${BOARD.collection}/`;
+      try{
+        const res=await boardFetch(boardApi(':runQuery'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{
+          from:[{collectionId:BOARD.collection}],
+          where:{compositeFilter:{op:'AND',filters:[
+            {fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:doc+dev+'_'}}},
+            {fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN',value:{referenceValue:doc+dev+'`'}}}]}},limit:20}})});
+        if(!res.ok)throw new Error('http '+res.status);
+        const rows=(await res.json()).filter(r=>r.document);
+        if(!rows.length){status('No scores found for that code.');return}
+        boardData.device=dev;let n=0;
+        for(const r of rows){
+          const f=r.document.fields||{},name=f.name?.stringValue||'Player',key=profileKey(name);if(!key)continue;
+          const scores={},cloud={};
+          for(const [k,v] of Object.entries(f.scores?.mapValue?.fields||{})){
+            const pts=Number(v.integerValue)||0,m=/^([cs])(\d+)$/.exec(k);if(!m||pts<=0)continue;
+            cloud[k]=pts;scores[(m[1]==='c'?'classic:':'special:')+m[2]]=pts;
+          }
+          const done=Object.keys(scores).filter(k=>k.startsWith('classic:')).map(k=>+k.split(':')[1]);
+          const unlockedAt=Math.min(LEVELS.length-1,done.length?Math.max(...done)+1:0);
+          absorbProfile({name,scores,unlocked:unlockedAt,level:unlockedAt},name);
+          const mine=boardData.players[key]||(boardData.players[key]={name,scores:{},synced:-1});
+          mine.name=name;for(const [k,v] of Object.entries(cloud))mine.scores[k]=Math.max(Number(mine.scores[k])||0,v);
+          mine.synced=-1;n++;
+        }
+        persistRestored();status(`Restored ${n} player${n===1?'':'s'}. Reloading…`);setTimeout(()=>location.reload(),900);
+      }catch(_){status('Can’t reach the online board. Check your connection and try again.')}
+    });
+  }
+  // V12 chrome: the six toolbar buttons move into one menu. Elements keep their ids and listeners,
+  // so every action runs exactly the code it ran before. Only the pause button stays in the bar.
+  function setupLook(){
+    const toggle=$('lookToggle');
+    toggle.textContent=LOOK==='new'?'Use the classic look':'Try the new look';
+    toggle.addEventListener('click',()=>{safeWrite('orbrinth-look-v12',LOOK==='new'?'classic':'new');location.reload()});
+    if(LOOK!=='new')return;
+    const bar=document.querySelector('.topbar'),tools=document.querySelector('.tools');
+    $('pause').setAttribute('aria-label','Pause');
+    const menuBtn=document.createElement('button');
+    menuBtn.id='menuButton';menuBtn.className='tool menu-tool';menuBtn.type='button';
+    menuBtn.setAttribute('aria-label','Menu');menuBtn.setAttribute('aria-expanded','false');menuBtn.setAttribute('aria-controls','hudMenu');
+    menuBtn.innerHTML='<span class="bars" aria-hidden="true"></span>';tools.appendChild(menuBtn);
+    const panel=document.createElement('div');panel.id='hudMenu';panel.className='hud-menu hidden';
+    panel.setAttribute('role','group');panel.setAttribute('aria-label','Game menu');
+    panel.innerHTML='<div class="menu-head"><span>MENU</span><small id="menuNote"></small></div><div class="menu-info"></div><div class="menu-grid"></div>';
+    panel.querySelector('.menu-info').append($('profileButton'),document.querySelector('.record-stat'));
+    const grid=panel.querySelector('.menu-grid');
+    for(const [id,text] of [['homeButton','Home'],['levels','Mazes'],['ballButton','Style'],['calibrate','Recalibrate'],['restart','Restart level']]){
+      const b=$(id);b.textContent=text;grid.appendChild(b);
+    }
+    bar.appendChild(panel);
+    let menuHold=false;
+    const isOpen=()=>!panel.classList.contains('hidden');
+    function openMenu(){
+      if(phase==='playing'){phase='paused';vx=vy=0;smoothX=smoothY=0;menuHold=true}
+      $('menuNote').textContent=menuHold?'Clock paused':'';
+      panel.classList.remove('hidden');menuBtn.setAttribute('aria-expanded','true');
+    }
+    function closeMenu(resume=true){
+      panel.classList.add('hidden');menuBtn.setAttribute('aria-expanded','false');
+      if(resume&&menuHold&&phase==='paused'&&overlay.classList.contains('hidden')&&$('skinOverlay').classList.contains('hidden')&&!document.hidden){phase='playing';tLast=performance.now()}
+      menuHold=false;updateControls();
+    }
+    menuBtn.addEventListener('click',()=>isOpen()?closeMenu():openMenu());
+    // Choosing an item: hand it the same state the old toolbar button saw (still playing), then close.
+    panel.addEventListener('click',event=>{
+      if(!event.target.closest('button'))return;
+      if(menuHold&&phase==='paused'){phase='playing';tLast=performance.now()}
+      menuHold=false;setTimeout(()=>closeMenu(false),0);
+    },true);
+    document.addEventListener('pointerdown',event=>{if(isOpen()&&!panel.contains(event.target)&&!menuBtn.contains(event.target))closeMenu()});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&isOpen())closeMenu()});
+  }
+  setupLook();setupZoom();setupBoard();setupData();
   applyUIMode(uiMode);resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
-      px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,connected:true,hasSensor,sensorSource,sensorProblem,
+      px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,goal:threeDActive()?null:goalPos(),connected:true,hasSensor,sensorSource,sensorProblem,
       tilt:currentTilt(),columns:C,rows:R,threeD:threeDActive(),threeDWaitNeutral,threeDNeutralHold,threeDGrace,
       crystals:crystals.map(c=>({...c})),falls:challengeFalls,platforms:platformMask?platformMask.reduce((n,x)=>n+x,0):0}),
     walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,platformMask:()=>platformMask?Array.from(platformMask):null,route3D:()=>challengeRoute.slice(),onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
