@@ -673,7 +673,7 @@
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
   let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
   let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,userZoom=1,camX=0,camY=0;
-  const ZOOM_MIN=.45,ZOOM_MAX=1.6,ZOOM_STEP=1.25;
+  const ZOOM_MAX=1.6,ZOOM_STEP=1.25;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
   let sensorSource='none',orientationTime=-Infinity,sensorProblem='',lastStatusDraw=0;
@@ -1114,7 +1114,7 @@
     return {connected:seen.every(x=>x===1),route:pathLength,platforms:platformMask.reduce((n,v)=>n+v,0)};
   }
   function loadLevel(nextIndex,nextMode=mode){
-    mode=nextMode;
+    mode=nextMode;zoomFull=false; // every new maze starts in the normal view
     if(mode==='classic'){levelIndex=clamp(nextIndex,0,unlocked);[C,R]=LEVELS[levelIndex];}
     else{specialIndex=clamp(nextIndex,0,SPECIALS.length-1);[C,R]=[SPECIALS[specialIndex].cols,SPECIALS[specialIndex].rows];}
     W=C*S;H=R*S;
@@ -1194,24 +1194,35 @@
     // V12: a slimmer HUD gives the canvas more height. Pin the width so cells stay the same size on screen
     // and only the view ahead grows, instead of silently zooming the maze in.
     if(LOOK==='new'&&portrait)zoom=Math.min(width/(S*PIN_CELLS_ACROSS),Math.max(width,height)/260);
-    baseZoom=zoom;zoom=baseZoom*userZoom;
-    restrictCamera();}
-  // Player zoom: scales the camera only. Saved on this device.
-  function setUserZoom(v,save=true){
-    userZoom=clamp(Math.round(v*100)/100,ZOOM_MIN,ZOOM_MAX);
-    if(save)safeWrite('orbrinth-zoom-v12',String(userZoom));
-    zoom=baseZoom*userZoom;
-    camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();
-    $('zoomLevel').textContent=Math.round(userZoom*100)+'%';
-    $('zoomIn').disabled=userZoom>=ZOOM_MAX-.001;$('zoomOut').disabled=userZoom<=ZOOM_MIN+.001;
+    baseZoom=zoom;zoom=baseZoom*zoomMult();
+    restrictCamera();zoomLabels();}
+  // Player zoom: scales the camera only. The lowest zoom shows the whole maze at once ("FULL").
+  let zoomFull=false;
+  const zoomMin=()=>W>0&&H>0?Math.min(1,(Math.min(width/W,height/H)*.97)/baseZoom):.5;
+  const zoomMult=()=>zoomFull?zoomMin():clamp(userZoom,zoomMin(),ZOOM_MAX);
+  function applyZoom(){
+    zoom=baseZoom*zoomMult();
+    camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();zoomLabels();
+  }
+  function setUserZoom(v){
+    const m=clamp(Math.round(v*1000)/1000,zoomMin(),ZOOM_MAX);
+    zoomFull=m<=zoomMin()+.001&&zoomMin()<1;
+    if(!zoomFull){userZoom=m;safeWrite('orbrinth-zoom-v12',String(m))} // the full-maze view is never remembered
+    applyZoom();
+  }
+  function zoomLabels(){
+    $('zoomLevel').textContent=zoomFull?'FULL':Math.round(zoomMult()*100)+'%';
+    $('zoomIn').disabled=!zoomFull&&zoomMult()>=ZOOM_MAX-.001;$('zoomOut').disabled=zoomFull;
   }
   function setupZoom(){
     const saved=parseFloat(safeRead('orbrinth-zoom-v12'));
-    if(saved>=ZOOM_MIN&&saved<=ZOOM_MAX)userZoom=saved;
-    $('zoomIn').addEventListener('click',()=>setUserZoom(userZoom*ZOOM_STEP));
-    $('zoomOut').addEventListener('click',()=>setUserZoom(userZoom/ZOOM_STEP));
-    $('zoomLevel').addEventListener('click',()=>setUserZoom(1));
-    $('zoomLevel').textContent=Math.round(userZoom*100)+'%';
+    if(saved>=.6&&saved<=ZOOM_MAX)userZoom=saved; // far-out views are not carried into the next session
+    $('zoomIn').addEventListener('click',()=>setUserZoom(zoomMult()*ZOOM_STEP));
+    $('zoomOut').addEventListener('click',()=>setUserZoom(zoomMult()/ZOOM_STEP));
+    // Middle button: one tap shows the whole maze, the next tap returns to the normal view on the ball.
+    $('zoomLevel').addEventListener('click',()=>{if(zoomFull){userZoom=1;safeWrite('orbrinth-zoom-v12','1');setUserZoom(1)}else setUserZoom(0)});
+    $('zoomLevel').setAttribute('aria-label','Show full maze or return to normal view');
+    $('zoomLevel').title='Show full maze / back to normal';
   }
   function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
