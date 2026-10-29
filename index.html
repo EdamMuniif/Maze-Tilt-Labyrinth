@@ -1405,7 +1405,7 @@
       else specialResults[specialIndex]=Number(elapsed.toFixed(2));}
     const isFinal=currentNumber()===currentTotal();
     if(mode==='classic'&&!isFinal)unlocked=Math.max(unlocked,levelIndex+1);
-    saveProgress();boardRecord(scoreKey.replace('classic:','c').replace('special:','s'),earned);
+    saveProgress();renderPlayerStats();boardRecord(scoreKey.replace('classic:','c').replace('special:','s'),earned);
     showDialog(isFinal?'CHALLENGE <span class="gradient">CLEARED.</span>':'MAZE <span class="gradient">COMPLETE.</span>',
       `${currentName().toUpperCase()} COMPLETE`,
       `${playerProfile?.name||'Player'} scored ${earned.toLocaleString('en-US')} points · Personal best ${Number(playerProfile?.highScore||earned).toLocaleString('en-US')}. Finished in ${formatTime(elapsed)} with ${threeDActive()?`${challengeFalls} falls and all four crystals`: `${bumpCount} wall contacts`}. ${isFinal?'You completed this maze series.':'The next distinct maze is ready.'}`,
