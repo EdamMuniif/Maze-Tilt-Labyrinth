@@ -457,7 +457,7 @@
   </div>
 </header>
 <main class="playfield" id="playfield" aria-label="Maze play area">
-  <canvas id="game" aria-label="Top-down maze. Roll the ball from blue start at bottom left to pink goal at top right."></canvas>
+  <canvas id="game" aria-label="Top-down maze. Roll the ball from the start at the bottom left up to a hidden exit on the top edge."></canvas>
 </main>
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
@@ -865,7 +865,7 @@
     $('levelLabel').textContent=mode==='classic'?`${String(levelIndex+1).padStart(2,'0')} / ${LEVELS.length}`:`S${specialIndex+1} / ${SPECIALS.length}`;
     document.querySelector('.brand small').textContent='TILT INTO THE UNKNOWN';
     best=Number(mode==='classic'?levelResults[levelIndex]:specialResults[specialIndex])||null;
-    canvas.setAttribute('aria-label',`Top-down ${currentName()} maze. Tilt your phone to move the ball toward the pink target.`);
+    canvas.setAttribute('aria-label',`Top-down ${currentName()} maze. Tilt your phone to move the ball up and out. The exit is hidden: find it.`);
     renderPlayerStats();
   }
 
@@ -1577,12 +1577,14 @@
     if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
   const goalPos=()=>mode==='classic'?[goalCol*S+S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
+  // The finish is deliberately NOT drawn: finding the way out is the game. Set SHOW_FINISH to true to draw it again.
+  const SHOW_FINISH=false;
   function drawGoal(time){
     const [x,y]=goalPos();
-    ctx.save();
+    if(SHOW_FINISH){ctx.save();
     let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,rgba(mazeTheme.finish,.28));aura.addColorStop(1,rgba(mazeTheme.finish,0));ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
     ctx.strokeStyle=mazeTheme.finish;ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
-    ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();
+    ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();}
     const [sx,sy]=mode==='classic'?[S/2,H-S/2]:roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
   }
   function drawRollingSurface(context,r,style,color){
@@ -1841,18 +1843,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore();drawGoalArrow()}
-  // A small marker on the screen edge points to the finish when it is off screen. Not shown on fog levels: finding the way is the challenge there.
-  function drawGoalArrow(){
-    if(zoomFull||fogActive()||phase==='intro')return;
-    const [gx,gy]=goalPos(),sx=(gx-camX)*zoom,sy=(gy-camY)*zoom,m=26;
-    if(sx>=m&&sx<=width-m&&sy>=m&&sy<=height-m)return;
-    const cx=width/2,cy=height/2,dx=sx-cx,dy=sy-cy,t=Math.min((width/2-m)/Math.max(1e-6,Math.abs(dx)),(height/2-m)/Math.max(1e-6,Math.abs(dy)));
-    const ax=cx+dx*t,ay=cy+dy*t,ang=Math.atan2(dy,dx);
-    ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);ctx.globalAlpha=.88;ctx.fillStyle=mazeTheme.finish;
-    ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-7,-8.5);ctx.lineTo(-3,0);ctx.lineTo(-7,8.5);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
-  }
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
