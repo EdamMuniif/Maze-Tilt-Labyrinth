@@ -54,6 +54,6 @@ Portrait update (local, not pushed)
 - Classic mazes are now tall (columns x rows from 19x33 up to 37x65). The ball starts bottom-left and the finish is a random cell on the top edge.
 - The finish column is drawn from the level seed, so it differs per level but is the same for every player (fair leaderboard).
 - Shaped mazes also start bottom-left and finish near the top. Circle (centre goal) and the 3D level are kept as they were.
-- The finish is hidden on purpose (no marker, no arrow): the player has to find the exit by playing. Set SHOW_FINISH=true in drawGoal to draw it again.
+- The exit is an unmarked opening in the top wall (or silhouette edge for shapes): no marker, no arrow, you find the gap by playing. Set SHOW_FINISH=true in drawGoal to draw it again.
 - Rotate-to-portrait logic removed. Maze version bump resets old wide-maze times; leaderboard season is players_s2.
 - Verified in desktop Chromium only: solvability, goal on top row, deterministic tilt replay. Not tested on a real phone.

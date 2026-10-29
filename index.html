@@ -975,13 +975,15 @@
     // Portrait rule: start at the bottom-left of the silhouette, finish near the top.
     let top=R,bottom=-1;for(let i=0;i<mask.length;i++)if(mask[i]){const y=(i/C)|0;if(y<top)top=y;if(y>bottom)bottom=y}
     let start=-1;for(let x=0;x<C&&start<0;x++)if(mask[bottom*C+x])start=bottom*C+x;
-    const tops=[];for(let i=0;i<mask.length;i++)if(mask[i]&&((i/C)|0)<=top+1)tops.push(i);
+    const tops=[];for(let i=0;i<mask.length;i++){const yy=(i/C)|0;if(mask[i]&&yy<=top+3&&(yy===0||!mask[i-C]))tops.push(i)}
+    if(!tops.length)for(let i=0;i<mask.length;i++)if(mask[i]&&((i/C)|0)<=top+1)tops.push(i);
     for(let i=0;i<9;i++){
       const trial=shapeTrial(mask,(rng()*0xffffffff)>>>0||1,start,tops);
       if(!trial.connected)throw Error('Special shape maze disconnected');
       if(!bestTrial||trial.route>bestTrial.route)bestTrial=trial;
     }
     activeMask=mask;grid=bestTrial.walls;startCell=bestTrial.start;goalCell=bestTrial.goal;
+    {const g=bestTrial.goal;if(g<C||!mask[g-C])grid[g]&=~N;} // exit opening in the silhouette edge
     pathLength=bestTrial.route;deadEnds=bestTrial.dead;roundMode=false;roundGeom=null;
   }
   function polarPoint(r,a){const c=roundGeom.center;return [c+Math.cos(a)*r,c+Math.sin(a)*r]}
@@ -1154,6 +1156,7 @@
     if(mode==='classic'){
       activeMask=null;roundMode=false;roundGeom=null;
       grid=candidate.walls;pathLength=candidate.route;deadEnds=candidate.dead;seed=chosenSeed;
+      grid[goalCol]&=~N; // the exit: an opening in the top wall, visible from the start, never marked
       paintMaze();
     }else{
       const shapeSeed=((levelRandom()*0xffffffff)>>>0)||1;seed=shapeSeed;
