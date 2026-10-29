@@ -421,14 +421,14 @@
     body[data-ui-mode="night"] .board-list li{color:#eaf2ff;border-color:#2c3a60}
     body[data-ui-mode="night"] .board-list li.me{background:#1d2c4d}
     /* One view button: full maze <-> back to the ball. Camera only; physics and maze data never read it. */
-    .view-toggle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;padding:0;border:0;border-radius:12px;background:#12193a;color:#fff;box-shadow:0 6px 16px #12193a33;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;transition:transform .12s}
-    .view-toggle:active{transform:scale(.94)}
+    .view-toggle{position:absolute;right:12px;bottom:calc(100% + 12px);z-index:4;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#12193a;box-shadow:none;opacity:.8;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;transition:transform .12s,opacity .12s}
+    .view-toggle:active{transform:scale(.92);opacity:1}
     .view-toggle.hidden{display:none}
-    .view-toggle svg{width:22px;height:22px;display:block}
+    .view-toggle svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
     .view-toggle .ic-in{display:none}
     .view-toggle[aria-pressed="true"] .ic-out{display:none}
     .view-toggle[aria-pressed="true"] .ic-in{display:block}
-    body[data-ui-mode="night"] .view-toggle{background:#e9eefc;color:#101a38;box-shadow:0 6px 16px #0006}
+    body[data-ui-mode="night"] .view-toggle{background:rgba(16,26,56,.55);color:#e9eefc}
     .bottom-bar{gap:8px}
     /* Messages float just above the bar so they never cover the view button. */
     .bottom-bar .toast{top:auto;bottom:calc(100% + 10px);transform:translate(-50%,8px)}
@@ -461,7 +461,7 @@
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
   <button type="button" class="view-toggle" id="viewToggle" aria-pressed="false" aria-label="Show the full maze">
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><g class="ic-out"><path d="M2 2h8v3H5v5H2zM14 2h8v8h-3V5h-5zM2 14h3v5h5v3H2zM19 14h3v8h-8v-3h5z"/></g><g class="ic-in"><path d="M8 2v6H2v3h9V2zM16 2v9h9V8h-6V2zM2 13v3h6v6h3v-9zM13 13v9h3v-6h6v-3z" transform="translate(-.5 -.5)"/></g></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g class="ic-out"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></g><g class="ic-in"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></g></svg>
   </button>
   <details class="sensor-details" id="sensorDetails"><summary>RAW DATA</summary>
     <div class="sensor-panel" role="group" aria-label="Live device sensor values">
@@ -1577,8 +1577,8 @@
     if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
   const goalPos=()=>mode==='classic'?[goalCol*S+S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
-  // The finish is deliberately NOT drawn: finding the way out is the game. Set SHOW_FINISH to true to draw it again.
-  const SHOW_FINISH=false;
+  // The finish ring is drawn so players can see where to go. Set SHOW_FINISH to false for a hidden-exit mode.
+  const SHOW_FINISH=true;
   function drawGoal(time){
     const [x,y]=goalPos();
     if(SHOW_FINISH){ctx.save();
