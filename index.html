@@ -1287,8 +1287,8 @@
   function toast(msg){let el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2450)}
   function updateControls(){
     $('calibrate').disabled=(phase==='intro');
-    // Hidden on the 3D level (own camera) and on fog levels (a full map would defeat the fog challenge).
-    $('viewToggle').classList.toggle('hidden',phase==='intro'||threeDActive()||fogActive());
+    // Hidden on the 3D level (own camera). On fog levels the full view still shows only what the fog allows.
+    $('viewToggle').classList.toggle('hidden',phase==='intro'||threeDActive());
     updateSensorStatus();
   }
   function updateSensorStatus(){
