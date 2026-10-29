@@ -426,6 +426,10 @@
     .zoom-ctl button{width:44px;height:44px;padding:0;border:0;background:none;color:#12193a;font:600 24px/1 system-ui,sans-serif;touch-action:manipulation;cursor:pointer}
     .zoom-ctl button:active{background:#e4e8f5}
     .zoom-ctl button:disabled{opacity:.35}
+    .zoom-ctl .zoom-rotate{border-top:1px solid #dde1ee;font-size:21px}
+    .zoom-ctl .zoom-rotate[aria-pressed="true"]{background:#12193a;color:#fff}
+    body[data-ui-mode="night"] .zoom-ctl .zoom-rotate{border-color:#34436a}
+    body[data-ui-mode="night"] .zoom-ctl .zoom-rotate[aria-pressed="true"]{background:#e9eefc;color:#101a38}
     .zoom-ctl .zoom-level{height:30px;border-top:1px solid #dde1ee;border-bottom:1px solid #dde1ee;font:700 11px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#4a557a;letter-spacing:0}
     body[data-ui-mode="night"] .zoom-ctl{background:#101a36ee;border-color:#34436a}
     body[data-ui-mode="night"] .zoom-ctl button{color:#eaf2ff}
@@ -456,6 +460,7 @@
     <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
     <button type="button" id="zoomLevel" class="zoom-level" aria-label="Reset zoom" title="Reset zoom">100%</button>
     <button type="button" id="zoomOut" aria-label="Zoom out">&minus;</button>
+    <button type="button" id="zoomRotate" class="zoom-rotate" aria-label="Rotate maze to portrait" aria-pressed="false" title="Rotate maze">&#10227;</button>
   </div>
 </main>
 <footer class="bottom-bar" id="bottomBar">
@@ -609,8 +614,8 @@
   function paintFog(){
     if(!fogActive()||!fogVisible)return;
     // In world coordinates, cull to the visible camera window for mobile efficiency.
-    const minC=clamp(Math.floor(camX/S)-1,0,C-1),maxC=clamp(Math.ceil((camX+width/zoom)/S)+1,0,C-1);
-    const minR=clamp(Math.floor(camY/S)-1,0,R-1),maxR=clamp(Math.ceil((camY+height/zoom)/S)+1,0,R-1);
+    const minC=clamp(Math.floor(camX/S)-1,0,C-1),maxC=clamp(Math.ceil((camX+viewW())/S)+1,0,C-1);
+    const minR=clamp(Math.floor(camY/S)-1,0,R-1),maxR=clamp(Math.ceil((camY+viewH())/S)+1,0,R-1);
     const limit=fogDepthForLevel();
     for(let r=minR;r<=maxR;r++)for(let c=minC;c<=maxC;c++){
       const i=r*C+c,depth=fogVisible[i];
@@ -672,7 +677,12 @@
   const cellPos=i=>[i%C*S+S/2,Math.floor(i/C)*S+S/2];
   const inMask=(x,y)=>activeMask&&x>=0&&y>=0&&x<C&&y<R&&activeMask[y*C+x];
   let phase='intro',control='tilt',elapsed=0,speedAdjustedElapsed=0,bumpCount=0,lastBump=-1,best=null;
-  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,userZoom=1,camX=0,camY=0;
+  let tLast=performance.now(),width=0,height=0,dpr=1,zoom=1,baseZoom=1,userZoom=1,camX=0,camY=0,userRotate=false;
+  // Rotated view (portrait phones): the maze is drawn turned 90 degrees counter-clockwise, so wide mazes fill the tall screen.
+  // Maze data and physics stay in maze coordinates; only drawing and the tilt direction are rotated to match.
+  const rotated=()=>userRotate&&height>width&&!threeDActive();
+  const viewW=()=>rotated()?height/zoom:width/zoom;
+  const viewH=()=>rotated()?width/zoom:height/zoom;
   const ZOOM_MAX=1.6,ZOOM_STEP=1.25;
   let px=S*.5,py=(R-.5)*S,vx=0,vy=0,trail=[],trailTimer=0;
   let orientListening=false,hasSensor=false,sensorTime=0,pendingCalibration=true,raw=null,baseline=null;
@@ -1185,7 +1195,7 @@
     }
     vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
     ballQuat=[1,0,0,0];rollingDistance=0;initFog();
-    updateClock();camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();}
+    updateClock();camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();}
   function resize(){width=playfield.clientWidth;height=playfield.clientHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
     const portrait=height>width;
@@ -1198,11 +1208,11 @@
     restrictCamera();zoomLabels();}
   // Player zoom: scales the camera only. The lowest zoom shows the whole maze at once ("FULL").
   let zoomFull=false;
-  const zoomMin=()=>W>0&&H>0?Math.min(1,(Math.min(width/W,height/H)*.97)/baseZoom):.5;
+  const zoomMin=()=>W>0&&H>0?Math.min(1,((rotated()?Math.min(width/H,height/W):Math.min(width/W,height/H))*.97)/baseZoom):.5;
   const zoomMult=()=>zoomFull?zoomMin():clamp(userZoom,zoomMin(),ZOOM_MAX);
   function applyZoom(){
     zoom=baseZoom*zoomMult();
-    camX=px-width/(2*zoom);camY=py-height/(2*zoom);restrictCamera();zoomLabels();
+    camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();zoomLabels();
   }
   function setUserZoom(v){
     const m=clamp(Math.round(v*1000)/1000,zoomMin(),ZOOM_MAX);
@@ -1221,16 +1231,24 @@
     $('zoomOut').addEventListener('click',()=>setUserZoom(zoomMult()/ZOOM_STEP));
     // Middle button: one tap shows the whole maze, the next tap returns to the normal view on the ball.
     $('zoomLevel').addEventListener('click',()=>{if(zoomFull){userZoom=1;safeWrite('orbrinth-zoom-v12','1');setUserZoom(1)}else setUserZoom(0)});
+    userRotate=safeRead('orbrinth-rotate-v12')==='1';
+    $('zoomRotate').setAttribute('aria-pressed',String(userRotate));
+    $('zoomRotate').addEventListener('click',()=>{
+      userRotate=!userRotate;safeWrite('orbrinth-rotate-v12',userRotate?'1':'0');
+      $('zoomRotate').setAttribute('aria-pressed',String(userRotate));
+      vx=vy=0;smoothX=smoothY=0; // no leftover push from the old direction
+      applyZoom();
+    });
     $('zoomLevel').setAttribute('aria-label','Show full maze or return to normal view');
     $('zoomLevel').title='Show full maze / back to normal';
   }
-  function restrictCamera(){let vw=width/zoom,vh=height/zoom;camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
+  function restrictCamera(){let vw=viewW(),vh=viewH();camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
     if(threeDActive()){
       const follow=1-Math.exp(-dt*5.5);isoCamX+=(px+S*3.4-isoCamX)*follow;isoCamY+=(py-S*1.5-isoCamY)*follow;
       return;
     }
-    const vw=width/zoom,vh=height/zoom;
+    const vw=viewW(),vh=viewH();
     const targetX=W>vw?clamp(px-vw/2,0,W-vw):(W-vw)/2;
     const targetY=H>vh?clamp(py-vh/2,0,H-vh):(H-vh)/2;
     const f=1-Math.exp(-dt*8);camX+=(targetX-camX)*f;camY+=(targetY-camY)*f;}
@@ -1534,7 +1552,8 @@
       threeDGrace=Math.max(0,threeDGrace-dt);
     }
     elapsed+=dt;speedAdjustedElapsed+=dt*currentSpeed().factor;updateClock();
-    const [targetX,targetY]=currentTilt();
+    let [targetX,targetY]=currentTilt();
+    if(rotated())[targetX,targetY]=[-targetY,targetX]; // screen tilt -> maze direction for the rotated view
     smoothX+=(targetX-smoothX)*clamp(dt*13,0,1);
     smoothY+=(targetY-smoothY)*clamp(dt*13,0,1);
     const magnitude=Math.hypot(smoothX,smoothY);
@@ -1820,7 +1839,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();if(rotated())ctx.transform(0,-zoom,zoom,0,-camY*zoom,(camX+viewW())*zoom);else{ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom)}ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
