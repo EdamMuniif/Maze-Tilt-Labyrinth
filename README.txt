@@ -57,3 +57,7 @@ Portrait update (local, not pushed)
 - The exit is an unmarked opening in the top wall (or silhouette edge for shapes): no marker, no arrow, you find the gap by playing. Set SHOW_FINISH=true in drawGoal to draw it again.
 - Rotate-to-portrait logic removed. Maze version bump resets old wide-maze times; leaderboard season is players_s2.
 - Verified in desktop Chromium only: solvability, goal on top row, deterministic tilt replay. Not tested on a real phone.
+
+Backup and recovery (local, not pushed)
+- Home screen: "Back up or restore my data". Save/load a .json backup of all local players, and (once the leaderboard is on) a recovery code that restores scores and unlocked mazes on a new phone.
+- Tested in desktop Chromium with a mocked database: code restore, backup save, wipe, backup load. Not tested against a real Firebase project or a real phone.

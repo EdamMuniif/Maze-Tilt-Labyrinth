@@ -418,6 +418,10 @@
     .board-list li.me{background:#eef3ff;border-radius:8px;border-bottom-color:transparent}
     .board-list li.me .nm::after{content:" · you";font-weight:600;color:#5266a0}
     .board-list li.top1 .rk{color:#b8860b}
+    .rec-code{margin:0 0 10px;padding:12px;border:1px solid #dde1ee;border-radius:10px;background:#f6f7fb;color:#12193a;text-align:center;font:700 16px/1.2 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.06em;user-select:all;-webkit-user-select:all}
+    .rec-input{display:block;width:100%;box-sizing:border-box;margin:10px 0;padding:12px;border:1px solid #dde1ee;border-radius:10px;background:#fff;color:#12193a;font:600 15px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;text-transform:uppercase}
+    .board-dialog .skin-finish,.board-dialog .skin-back-home{margin-top:8px}
+    body[data-ui-mode="night"] .rec-code,body[data-ui-mode="night"] .rec-input{background:#1d2c4d;border-color:#2c3a60;color:#eaf2ff}
     .board-status{min-height:18px;text-align:center}
     body[data-ui-mode="night"] .board-dialog h2{color:#eaf2ff}
     body[data-ui-mode="night"] .board-dialog p{color:#b3c3dd}
@@ -518,6 +522,7 @@
     <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
     <button class="cta secondary board-open hidden" id="boardOpen" type="button">Leaderboard <span class="arrow" aria-hidden="true">★</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
+    <button class="cta link" id="dataOpen" type="button">Back up or restore my data</button>
     <button class="cta link" id="lookToggle" type="button"></button>
   </section>
 </div>
@@ -530,6 +535,25 @@
     <p class="board-status" id="boardStatus" role="status"></p>
     <button id="boardRefresh" class="skin-finish" type="button">Refresh</button>
     <button id="boardClose" class="skin-back-home" type="button">Close</button>
+  </section>
+</div>
+<div class="shade skin-shade hidden" id="dataOverlay" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+  <section class="dialog board-dialog">
+    <div class="eyebrow">YOUR DATA</div>
+    <h2 id="dataTitle" tabindex="-1">Back up &amp; restore</h2>
+    <p>Your progress lives in this browser. Save a backup file now and then, so a new phone or cleared browser never costs you your scores.</p>
+    <div id="recSection" class="hidden">
+      <p><strong>Recovery code.</strong> Keep it somewhere safe. On a new phone, enter it to get your scores and unlocked mazes back from the online board.</p>
+      <div class="rec-code" id="recCode" aria-live="polite"></div>
+      <button id="recCopy" class="skin-finish" type="button">Copy code</button>
+      <input id="recInput" class="rec-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ORB-XXXX-XXXX-XXXX-XXXX" aria-label="Recovery code">
+      <button id="recRestore" class="skin-finish" type="button">Restore from code</button>
+    </div>
+    <button id="backupSave" class="skin-finish" type="button">Save backup file</button>
+    <button id="backupLoad" class="skin-finish" type="button">Load backup file</button>
+    <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
+    <p class="board-status" id="dataStatus" role="status"></p>
+    <button id="dataClose" class="skin-back-home" type="button">Close</button>
   </section>
 </div>
 <div class="shade skin-shade hidden" id="skinOverlay" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
@@ -1949,6 +1973,99 @@
     $('boardClose').addEventListener('click',()=>$('boardOverlay').classList.add('hidden'));
     boardSync();
   }
+
+  // Backup and restore. A backup file holds every local profile plus the board identity. The recovery code is the
+  // board device id; with it a new phone can pull scores and unlocked mazes back from the online board.
+  const recFormat=id=>'ORB-'+id.toUpperCase().match(/.{4}/g).join('-');
+  const recParse=text=>{const h=String(text||'').toLowerCase().replace(/^orb/,'').replace(/[^0-9a-f]/g,'');return /^[0-9a-f]{16}$/.test(h)?h:''};
+  function absorbProfile(raw,name){
+    const key=profileKey(name||raw?.name);if(!key)return;
+    const inc=normalizeProfile(raw,name||raw?.name),cur=profiles[key];
+    if(!cur){profiles[key]=inc;return}
+    for(const [k,v] of Object.entries(inc.scores))cur.scores[k]=Math.max(Number(cur.scores[k])||0,v);
+    for(const [dst,src] of [[cur.classicBest,inc.classicBest],[cur.specialBest,inc.specialBest]])
+      for(const [k,v] of Object.entries(src))if(!(Number(dst[k])<=Number(v)))dst[k]=v;
+    cur.unlocked=Math.max(cur.unlocked,inc.unlocked);
+    cur.highScore=Math.max(0,...Object.values(cur.scores).map(Number));
+  }
+  function persistRestored(){safeWrite(PROFILE_STORE,JSON.stringify(profiles));boardSave()}
+  function setupData(){
+    const status=msg=>{$('dataStatus').textContent=msg};
+    const open=()=>{
+      status('');
+      if(BOARD_ON){$('recSection').classList.remove('hidden');$('recCode').textContent=recFormat(boardData.device)}
+      $('dataOverlay').classList.remove('hidden');$('dataTitle').focus();
+    };
+    $('dataOpen').addEventListener('click',open);
+    $('dataClose').addEventListener('click',()=>$('dataOverlay').classList.add('hidden'));
+    $('recCopy').addEventListener('click',async()=>{
+      const code=recFormat(boardData.device);
+      try{await navigator.clipboard.writeText(code);status('Code copied.')}
+      catch(_){const r=document.createRange();r.selectNodeContents($('recCode'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);status('Select and copy the code above.')}
+    });
+    $('backupSave').addEventListener('click',()=>{
+      if(playerProfile)saveProfiles();
+      const data={app:'orbrinth',backup:1,mazeVersion:MAZE_VERSION,exported:new Date().toISOString(),profiles,board:{device:boardData.device,players:boardData.players}};
+      const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download=`orbrinth-backup-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+      status('Backup file saved. Keep it somewhere safe.');
+    });
+    $('backupLoad').addEventListener('click',()=>$('backupFile').click());
+    $('backupFile').addEventListener('change',async e=>{
+      const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+      try{
+        const d=JSON.parse(await f.text());
+        if(d?.app!=='orbrinth'||!d.profiles||typeof d.profiles!=='object')throw new Error('not a backup');
+        if(d.mazeVersion!==MAZE_VERSION){status('This backup is from a different maze version and can’t be loaded.');return}
+        let n=0;
+        for(const p of Object.values(d.profiles)){if(p&&p.name){absorbProfile(p,p.name);n++}}
+        const b=d.board;
+        if(b&&/^[0-9a-f]{16}$/.test(b.device||'')){
+          boardData.device=b.device;
+          for(const [k,m] of Object.entries(b.players||{})){
+            const mine=boardData.players[k]||(boardData.players[k]={name:m.name||'',scores:{},synced:-1});
+            mine.name=m.name||mine.name;
+            for(const [sk,v] of Object.entries(m.scores||{}))mine.scores[sk]=Math.max(Number(mine.scores[sk])||0,Number(v)||0);
+            mine.synced=-1;
+          }
+        }
+        persistRestored();status(`Restored ${n} player${n===1?'':'s'}. Reloading…`);setTimeout(()=>location.reload(),900);
+      }catch(_){status('That file isn’t an ORBRINTH backup.')}
+    });
+    $('recRestore').addEventListener('click',async()=>{
+      const dev=recParse($('recInput').value);
+      if(!dev){status('That code doesn’t look right. It starts with ORB- and has 16 characters.');return}
+      status('Looking for your scores…');
+      const doc=`projects/${BOARD.projectId}/databases/(default)/documents/${BOARD.collection}/`;
+      try{
+        const res=await boardFetch(boardApi(':runQuery'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{
+          from:[{collectionId:BOARD.collection}],
+          where:{compositeFilter:{op:'AND',filters:[
+            {fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:doc+dev+'_'}}},
+            {fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN',value:{referenceValue:doc+dev+'`'}}}]}},limit:20}})});
+        if(!res.ok)throw new Error('http '+res.status);
+        const rows=(await res.json()).filter(r=>r.document);
+        if(!rows.length){status('No scores found for that code.');return}
+        boardData.device=dev;let n=0;
+        for(const r of rows){
+          const f=r.document.fields||{},name=f.name?.stringValue||'Player',key=profileKey(name);if(!key)continue;
+          const scores={},cloud={};
+          for(const [k,v] of Object.entries(f.scores?.mapValue?.fields||{})){
+            const pts=Number(v.integerValue)||0,m=/^([cs])(\d+)$/.exec(k);if(!m||pts<=0)continue;
+            cloud[k]=pts;scores[(m[1]==='c'?'classic:':'special:')+m[2]]=pts;
+          }
+          const done=Object.keys(scores).filter(k=>k.startsWith('classic:')).map(k=>+k.split(':')[1]);
+          const unlockedAt=Math.min(LEVELS.length-1,done.length?Math.max(...done)+1:0);
+          absorbProfile({name,scores,unlocked:unlockedAt,level:unlockedAt},name);
+          const mine=boardData.players[key]||(boardData.players[key]={name,scores:{},synced:-1});
+          mine.name=name;for(const [k,v] of Object.entries(cloud))mine.scores[k]=Math.max(Number(mine.scores[k])||0,v);
+          mine.synced=-1;n++;
+        }
+        persistRestored();status(`Restored ${n} player${n===1?'':'s'}. Reloading…`);setTimeout(()=>location.reload(),900);
+      }catch(_){status('Can’t reach the online board. Check your connection and try again.')}
+    });
+  }
   // V12 chrome: the six toolbar buttons move into one menu. Elements keep their ids and listeners,
   // so every action runs exactly the code it ran before. Only the pause button stays in the bar.
   function setupLook(){
@@ -1993,7 +2110,7 @@
     document.addEventListener('pointerdown',event=>{if(isOpen()&&!panel.contains(event.target)&&!menuBtn.contains(event.target))closeMenu()});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&isOpen())closeMenu()});
   }
-  setupLook();setupZoom();setupBoard();
+  setupLook();setupZoom();setupBoard();setupData();
   applyUIMode(uiMode);resize();loadLevel(mode==='classic'?levelIndex:specialIndex,mode);renderPlayerStats();renderProfilePreview();$('chooseLevel').classList.add('hidden');requestAnimationFrame(frame);
   // Read-only diagnostics for verification of connectivity and sensor-only control.
   window.__mazeDebug={state:()=>({phase,control:'tilt',level:currentNumber(),unlocked:unlocked+1,mode,special:specialIndex+1,shape:currentName(),segments:wallSegments.length,
