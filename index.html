@@ -869,7 +869,7 @@
   }catch(_){profiles=Object.create(null)}
   // Maze set version: best times from the old wide mazes mean nothing on the tall ones, so they reset once.
   // Names, points and unlocked levels are kept.
-  const MAZE_VERSION='v2-portrait';
+  const MAZE_VERSION='v3-variety';
   if(safeRead('orbrinth-maze-version')!==MAZE_VERSION){
     for(const p of Object.values(profiles)){p.classicBest={};p.specialBest={}}
     levelResults={};specialResults={};
@@ -898,13 +898,101 @@
   }
 
   function randGen(input){let a=input>>>0;return ()=>{a+=0x6d2b79f5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
-  function buildMaze(input,goal){
-    let random=randGen(input),walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),start=(R-1)*C,stack=[start];seen[start]=1;
+  // Ten maze styles, one per classic level, so levels differ in character and not only in size.
+  // Every style yields a connected maze; the start is bottom-left and the finish is on the top row.
+  const MAZE_STYLES=['winding','halls','bushy','rooms','wilson','tall','braid','growing','kruskal','winding'];
+  function carveBacktrack(random,start,bias){ // bias: {axis:'h'|'v',p} prefers straight corridors along one axis
+    const walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),stack=[start];seen[start]=1;
     while(stack.length){
-      let a=stack[stack.length-1],x=a%C,y=(a/C)|0,available=[];
-      for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R&&!seen[ny*C+nx])available.push([ny*C+nx,bit,op])}
-      if(!available.length){stack.pop();continue}
-      const [b,bit,op]=available[(random()*available.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
+      const a=stack[stack.length-1],x=a%C,y=(a/C)|0,opts=[];
+      for(let d=0;d<4;d++){const [dx,dy,bit,op]=DIRS[d],nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R&&!seen[ny*C+nx])opts.push([ny*C+nx,bit,op,d])}
+      if(!opts.length){stack.pop();continue}
+      let pool=opts;
+      if(bias&&random()<bias.p){const along=opts.filter(o=>(o[3]%2===1)===(bias.axis==='h'));if(along.length)pool=along}
+      const [b,bit,op]=pool[(random()*pool.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
+    }
+    return walls;
+  }
+  function carvePrim(random,start){
+    const walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),edges=[];
+    const add=a=>{const x=a%C,y=(a/C)|0;for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R&&!seen[ny*C+nx])edges.push([a,ny*C+nx,bit,op])}};
+    seen[start]=1;add(start);
+    while(edges.length){
+      const i=(random()*edges.length)|0,e=edges[i];edges[i]=edges[edges.length-1];edges.pop();
+      if(seen[e[1]])continue;
+      walls[e[0]]&=~e[2];walls[e[1]]&=~e[3];seen[e[1]]=1;add(e[1]);
+    }
+    return walls;
+  }
+  function carveKruskal(random){
+    const walls=new Uint8Array(C*R).fill(15),parent=new Int32Array(C*R),edges=[];
+    for(let i=0;i<parent.length;i++)parent[i]=i;
+    const find=a=>{while(parent[a]!==a){parent[a]=parent[parent[a]];a=parent[a]}return a};
+    for(let y=0;y<R;y++)for(let x=0;x<C;x++){const a=y*C+x;if(x+1<C)edges.push([a,a+1,E,WE]);if(y+1<R)edges.push([a,a+C,SO,N])}
+    for(let i=edges.length-1;i>0;i--){const j=(random()*(i+1))|0;[edges[i],edges[j]]=[edges[j],edges[i]]}
+    for(const [a,b,bit,op] of edges){const ra=find(a),rb=find(b);if(ra===rb)continue;parent[ra]=rb;walls[a]&=~bit;walls[b]&=~op}
+    return walls;
+  }
+  function carveWilson(random,start){
+    const n=C*R,walls=new Uint8Array(n).fill(15),inTree=new Uint8Array(n),next=new Int32Array(n).fill(-1),nbrs=a=>{
+      const x=a%C,y=(a/C)|0,out=[];for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R)out.push([ny*C+nx,bit,op])}return out};
+    inTree[start]=1;
+    const order=Array.from({length:n},(_,i)=>i);
+    for(let i=n-1;i>0;i--){const j=(random()*(i+1))|0;[order[i],order[j]]=[order[j],order[i]]}
+    for(const first of order){
+      let a=first;
+      while(!inTree[a]){const o=nbrs(a),pick=o[(random()*o.length)|0];next[a]=pick[0];a=pick[0]}
+      a=first;
+      while(!inTree[a]){
+        const b=next[a],ax=a%C,ay=(a/C)|0,bx=b%C,by=(b/C)|0;
+        const bit=bx>ax?E:bx<ax?WE:by>ay?SO:N,op=bx>ax?WE:bx<ax?E:by>ay?N:SO;
+        walls[a]&=~bit;walls[b]&=~op;inTree[a]=1;a=b;
+      }
+    }
+    return walls;
+  }
+  function carveGrowing(random,start){
+    const walls=new Uint8Array(C*R).fill(15),seen=new Uint8Array(C*R),active=[start];seen[start]=1;
+    while(active.length){
+      const i=random()<.5?active.length-1:(random()*active.length)|0,a=active[i],x=a%C,y=(a/C)|0,opts=[];
+      for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&nx<C&&ny>=0&&ny<R&&!seen[ny*C+nx])opts.push([ny*C+nx,bit,op])}
+      if(!opts.length){active.splice(i,1);continue}
+      const [b,bit,op]=opts[(random()*opts.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;active.push(b);
+    }
+    return walls;
+  }
+  function addLoops(walls,random,chance){ // knocks one wall out of a share of the dead ends, so there are several routes
+    for(let a=0;a<walls.length;a++){
+      const w=walls[a],open=4-((w&1)!==0)-((w&2)!==0)-((w&4)!==0)-((w&8)!==0);
+      if(open!==1||random()>=chance)continue;
+      const x=a%C,y=(a/C)|0,opts=[];
+      for(const [dx,dy,bit,op] of DIRS){const nx=x+dx,ny=y+dy;if((w&bit)&&nx>=0&&nx<C&&ny>=0&&ny<R)opts.push([ny*C+nx,bit,op])}
+      if(opts.length){const [b,bit,op]=opts[(random()*opts.length)|0];walls[a]&=~bit;walls[b]&=~op}
+    }
+  }
+  function addRooms(walls,random,count){ // open chambers: all inner walls of a small block removed
+    for(let k=0;k<count;k++){
+      const rw=3+((random()*2)|0),rh=3,x0=1+((random()*(C-rw-1))|0),y0=1+((random()*(R-rh-1))|0);
+      for(let y=y0;y<y0+rh;y++)for(let x=x0;x<x0+rw;x++){
+        const a=y*C+x;
+        if(x+1<x0+rw){walls[a]&=~E;walls[a+1]&=~WE}
+        if(y+1<y0+rh){walls[a]&=~SO;walls[a+C]&=~N}
+      }
+    }
+  }
+  function buildMaze(input,goal,style='winding'){
+    const random=randGen(input),start=(R-1)*C;let walls;
+    switch(style){
+      case 'halls':walls=carveBacktrack(random,start,{axis:'h',p:.8});break;
+      case 'tall':walls=carveBacktrack(random,start,{axis:'v',p:.8});break;
+      case 'bushy':walls=carvePrim(random,start);break;
+      case 'kruskal':walls=carveKruskal(random);break;
+      case 'wilson':walls=carveWilson(random,start);break;
+      case 'growing':walls=carveGrowing(random,start);break;
+      case 'rooms':walls=carveBacktrack(random,start);addRooms(walls,random,Math.round(C*R/110));break;
+      case 'braid':walls=carveBacktrack(random,start);addLoops(walls,random,.35);break;
+      case 'gauntlet':walls=carveBacktrack(random,start,{axis:'v',p:.5});addLoops(walls,random,.12);addRooms(walls,random,Math.round(C*R/260));break;
+      default:walls=carveBacktrack(random,start);
     }
     // Independently validate the shortest start->goal route with a BFS.
     let queue=new Int32Array(C*R),dist=new Int32Array(C*R).fill(-1),head=0,tail=1;queue[0]=start;dist[start]=0;
@@ -1178,7 +1266,7 @@
     let candidate=null,chosenSeed=0;
     for(let i=0;i<(mode==='classic'?40:0);i++){
       const trialSeed=(levelRandom()*0xffffffff)>>>0||1;
-      const trial=buildMaze(trialSeed,goalCol);
+      const trial=buildMaze(trialSeed,goalCol,mode==='classic'?MAZE_STYLES[levelIndex]:'winding');
       if(!trial.connected||trial.route<0)throw new Error('Maze connectivity invariant failed');
       if(!candidate||trial.route>candidate.route){candidate=trial;chosenSeed=trialSeed}
       if(candidate.route>=(C*R*.45))break;
