@@ -681,7 +681,7 @@
   const mazeTexture=document.createElement('canvas');mazeTexture.width=W;mazeTexture.height=H;
   const mctx=mazeTexture.getContext('2d',{alpha:false});
   let grid,seed=0,pathLength=0,deadEnds=0,activeMask=null,startCell=0,goalCell=0,goalCol=0,outsideTint=null;
-  let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null;
+  let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null,hexGeom=null;
   // Independent floating platform topology, deliberately isolated from all existing five specials.
   const CRYSTAL_COUNT=4;
   let platformMask=null,challengeRoute=[],crystals=[],challengeFalls=0,isoCamX=0,isoCamY=0,challengeThreeD=false;
@@ -763,7 +763,7 @@
     ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
     :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0];
   let ballChoice={...DEFAULT_BALL},mazeTheme={...DEFAULT_THEME},skinReturnPlaying=false,skinReturnToIntro=false;
-  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')paintMaze();else if(!threeDActive())paintSpecialMaze()}}
+  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')hexActive()?paintHexMaze():paintMaze();else if(!threeDActive())paintSpecialMaze()}}
 
   const PROFILE_STORE='tilt-labyrinth-v6-profiles';
   const ACTIVE_STORE='tilt-labyrinth-v6-active';
@@ -1250,11 +1250,123 @@
     activeMask=null;roundMode=false;roundGeom=null;grid=new Uint8Array(C*R);resetWallMap();
     return {connected:seen.every(x=>x===1),route:pathLength,platforms:platformMask.reduce((n,v)=>n+v,0)};
   }
+  // ---- Honeycomb mazes (classic levels 2, 4, 6 and 8) ---------------------------------------------------------
+  // Flat-top hexagon cells, larger than the square ones: an opening is only one hex edge long, so the cells have to be
+  // big enough for the ball to pass. The ball rolls on the same segment-collision code the shaped mazes use. Odd columns sit half a cell lower.
+  // Edge k faces 30deg, 90deg, 150deg, 210deg, 270deg, 330deg (screen coordinates): the opposite edge is (k+3)%6.
+  const HEX_R=30,HEX_H=HEX_R*Math.sqrt(3),HEX_PAD=T; // an opening is one hex edge (30px) wide, which clears the 19.6px ball plus both wall caps
+  const HEX_LEVELS={1:{cols:14,rows:32,style:'backtrack'},3:{cols:18,rows:42,style:'growing',mix:.03},5:{cols:21,rows:45,style:'backtrack',loops:.006},7:{hexagon:[700,1150],style:'backtrack',loops:.004}};
+  const hexActive=()=>mode==='classic'&&!!HEX_LEVELS[levelIndex];
+  const HEX_COS=[1,.5,-.5,-1,-.5,.5],HEX_SIN=[0,.8660254037844386,.8660254037844386,0,-.8660254037844386,-.8660254037844386];
+  function hexLayout(spec){
+    // A hexagon-shaped board is a tall flat-top hexagon (half-width a at the points, half-height b at the flat top and bottom).
+    const [ha,hb]=spec.hexagon||[0,0];
+    const cols=spec.hexagon?Math.ceil(2*ha/(1.5*HEX_R))+2:spec.cols,rows=spec.hexagon?Math.ceil(2*hb/HEX_H)+2:spec.rows,inc=new Uint8Array(cols*rows);
+    if(spec.hexagon){
+      const mx=HEX_R*(1+1.5*(cols-1)/2),my=HEX_H*(rows/2+.25);
+      for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){
+        const dx=Math.abs(HEX_R*(1+1.5*q)-mx),dy=Math.abs(HEX_H*(r+((q&1)?.5:0)+.5)-my);
+        inc[r*cols+q]=dy<=hb&&dx<=ha*(1-dy/(2*hb))?1:0;
+      }
+    }else inc.fill(1);
+    const nb=(i,k)=>{
+      const q=i%cols,r=(i/cols)|0,o=q&1;let nq,nr;
+      switch(k){case 0:nq=q+1;nr=o?r+1:r;break;case 1:nq=q;nr=r+1;break;case 2:nq=q-1;nr=o?r+1:r;break;
+        case 3:nq=q-1;nr=o?r:r-1;break;case 4:nq=q;nr=r-1;break;default:nq=q+1;nr=o?r:r-1}
+      if(nq<0||nr<0||nq>=cols||nr>=rows)return -1;
+      const j=nr*cols+nq;return inc[j]?j:-1;
+    };
+    const n=cols*rows,cx=new Float32Array(n),cy=new Float32Array(n);
+    let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    for(let i=0;i<n;i++)if(inc[i]){
+      const q=i%cols,r=(i/cols)|0;cx[i]=HEX_R*(1+1.5*q);cy[i]=HEX_H*(r+((q&1)?.5:0)+.5);
+      minX=Math.min(minX,cx[i]-HEX_R);maxX=Math.max(maxX,cx[i]+HEX_R);minY=Math.min(minY,cy[i]-HEX_H/2);maxY=Math.max(maxY,cy[i]+HEX_H/2);
+    }
+    const ox=HEX_PAD-minX,oy=HEX_PAD-minY;
+    for(let i=0;i<n;i++)if(inc[i]){cx[i]+=ox;cy[i]+=oy}
+    const Wd=maxX-minX+2*HEX_PAD,Ht=maxY-minY+2*HEX_PAD,topY=HEX_PAD,botY=Ht-HEX_PAD;
+    // Start: leftmost cell of the bottom row. Finish candidates: cells open to the sky along the top row.
+    let start=-1;
+    for(let i=0;i<n;i++)if(inc[i]&&nb(i,1)<0&&cy[i]+HEX_H/2>=botY-HEX_H/2-.01&&(start<0||cx[i]<cx[start]))start=i;
+    const tops=[];for(let i=0;i<n;i++)if(inc[i]&&nb(i,4)<0&&cy[i]-HEX_H/2<=topY+HEX_H/2+.01)tops.push(i);
+    return {cols,rows,inc,nb,cx,cy,W:Wd,H:Ht,start,tops,count:inc.reduce((a,b)=>a+b,0)};
+  }
+  function carveHex(L,spec,seedValue){
+    const style=spec.style;
+    const rng=randGen(seedValue),n=L.cols*L.rows,open=new Uint8Array(n),seen=new Uint8Array(n);
+    const link=(a,k,b)=>{open[a]|=1<<k;open[b]|=1<<((k+3)%6)};
+    if(style==='kruskal'){
+      const parent=Int32Array.from({length:n},(_,i)=>i),find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x]}return x},edges=[];
+      for(let a=0;a<n;a++)if(L.inc[a])for(let k=0;k<3;k++){const b=L.nb(a,k);if(b>=0)edges.push([a,k,b])}
+      for(let i=edges.length-1;i>0;i--){const j=(rng()*(i+1))|0;[edges[i],edges[j]]=[edges[j],edges[i]]}
+      for(const [a,k,b] of edges){const ra=find(a),rb=find(b);if(ra!==rb){parent[ra]=rb;link(a,k,b)}}
+    }else{
+      const list=[L.start];seen[L.start]=1;
+      while(list.length){
+        const idx=style==='growing'&&rng()<spec.mix?(rng()*list.length)|0:list.length-1,a=list[idx],opts=[];
+        for(let k=0;k<6;k++){const b=L.nb(a,k);if(b>=0&&!seen[b])opts.push([k,b])}
+        if(!opts.length){list.splice(idx,1);continue}
+        const [k,b]=opts[(rng()*opts.length)|0];link(a,k,b);seen[b]=1;list.push(b);
+      }
+      if(spec.loops)for(let a=0;a<n;a++)if(L.inc[a])for(let k=0;k<3;k++){
+        const b=L.nb(a,k);if(b>=0&&!(open[a]>>k&1)&&rng()<spec.loops)link(a,k,b);
+      }
+    }
+    return open;
+  }
+  function distHex(L,open){
+    const n=L.cols*L.rows,dist=new Int32Array(n).fill(-1),queue=new Int32Array(n);let head=0,tail=1;
+    queue[0]=L.start;dist[L.start]=0;
+    while(head<tail){const a=queue[head++];for(let k=0;k<6;k++)if(open[a]>>k&1){const b=L.nb(a,k);if(b>=0&&dist[b]<0){dist[b]=dist[a]+1;queue[tail++]=b}}}
+    return {dist,count:tail};
+  }
+  function buildHexMaze(L,spec,levelRandom){
+    const goal=L.tops[(levelRandom()*L.tops.length)|0];let best=null,bestSeed=0;
+    for(let i=0;i<40;i++){
+      const trialSeed=(levelRandom()*0xffffffff)>>>0||1,open=carveHex(L,spec,trialSeed),reach=distHex(L,open);
+      if(reach.count!==L.count||reach.dist[goal]<0)throw new Error('Honeycomb maze connectivity invariant failed');
+      if(!best||reach.dist[goal]>best.route){best={open,route:reach.dist[goal]};bestSeed=trialSeed}
+    }
+    let dead=0;
+    for(let i=0;i<L.inc.length;i++)if(L.inc[i]){let o=0;for(let k=0;k<6;k++)if(best.open[i]>>k&1)o++;if(o===1)dead++}
+    hexGeom={L,open:best.open,goal,start:L.start,startPos:[L.cx[L.start],L.cy[L.start]],goalPos:[L.cx[goal],L.cy[goal]],exitSeg:null};
+    grid=best.open;pathLength=best.route;deadEnds=dead;seed=bestSeed;
+  }
+  function constructHexWalls(){
+    resetWallMap();const {L,open,goal}=hexGeom;
+    for(let i=0;i<L.inc.length;i++)if(L.inc[i])for(let k=0;k<6;k++){
+      const b=L.nb(i,k);
+      if(b>=0&&((open[i]>>k&1)||b<i))continue; // open passage, or the neighbour already drew this shared wall
+      const k2=(k+1)%6,x=L.cx[i],y=L.cy[i];
+      addWall(x+HEX_R*HEX_COS[k],y+HEX_R*HEX_SIN[k],x+HEX_R*HEX_COS[k2],y+HEX_R*HEX_SIN[k2]);
+      if(i===goal&&k===4)hexGeom.exitSeg=wallSegments[wallSegments.length-1];
+    }
+  }
+  function paintHexMaze(){
+    const {L}=hexGeom;
+    mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);outsideTint=null;
+    if(LOOK==='new'){ // the board's silhouette reads against a quiet tint, as in the shaped mazes
+      outsideTint=mixColor(mazeTheme.floor,mazeTheme.wall1,.15);mctx.fillStyle=outsideTint;mctx.fillRect(0,0,W,H);
+      mctx.fillStyle=mazeTheme.floor;
+      for(let i=0;i<L.inc.length;i++)if(L.inc[i]){
+        mctx.beginPath();
+        for(let k=0;k<6;k++){const px2=L.cx[i]+(HEX_R+.5)*HEX_COS[k],py2=L.cy[i]+(HEX_R+.5)*HEX_SIN[k];k?mctx.lineTo(px2,py2):mctx.moveTo(px2,py2)}
+        mctx.closePath();mctx.fill();
+      }
+    }
+    paintFloorWash();
+    mctx.lineWidth=T;mctx.lineCap='round';mctx.lineJoin='round';mctx.strokeStyle=wallGradient();
+    mctx.beginPath();
+    for(const seg of wallSegments){if(seg===hexGeom.exitSeg)continue;mctx.moveTo(seg[0],seg[1]);mctx.lineTo(seg[2],seg[3])}
+    mctx.stroke();
+  }
   function loadLevel(nextIndex,nextMode=mode){
     mode=nextMode;
     if(mode==='classic'){levelIndex=clamp(nextIndex,0,unlocked);[C,R]=LEVELS[levelIndex];}
     else{specialIndex=clamp(nextIndex,0,SPECIALS.length-1);[C,R]=[SPECIALS[specialIndex].cols,SPECIALS[specialIndex].rows];}
-    W=C*S;H=R*S;
+    hexGeom=null;
+    const hexLay=mode==='classic'&&HEX_LEVELS[levelIndex]?hexLayout(HEX_LEVELS[levelIndex]):null;
+    if(hexLay){C=hexLay.cols;R=hexLay.rows;W=hexLay.W;H=hexLay.H}else{W=C*S;H=R*S}
     mazeTexture.width=W;mazeTexture.height=H;
     // A reproducible, level-specific random stream produces a different layout
     // for every level. Restart does NOT change the active maze.
@@ -1264,14 +1376,18 @@
     // identical for every player, so scores stay comparable.
     goalCol=mode==='classic'?Math.min(C-1,(levelRandom()*C)|0):0;
     let candidate=null,chosenSeed=0;
-    for(let i=0;i<(mode==='classic'?40:0);i++){
+    for(let i=0;i<(mode==='classic'&&!hexLay?40:0);i++){
       const trialSeed=(levelRandom()*0xffffffff)>>>0||1;
       const trial=buildMaze(trialSeed,goalCol,mode==='classic'?MAZE_STYLES[levelIndex]:'winding');
       if(!trial.connected||trial.route<0)throw new Error('Maze connectivity invariant failed');
       if(!candidate||trial.route>candidate.route){candidate=trial;chosenSeed=trialSeed}
       if(candidate.route>=(C*R*.45))break;
     }
-    if(mode==='classic'){
+    if(hexLay){
+      activeMask=null;roundMode=false;roundGeom=null;
+      buildHexMaze(hexLay,HEX_LEVELS[levelIndex],levelRandom);
+      constructHexWalls();paintHexMaze();
+    }else if(mode==='classic'){
       activeMask=null;roundMode=false;roundGeom=null;
       grid=candidate.walls;pathLength=candidate.route;deadEnds=candidate.dead;seed=chosenSeed;
       grid[goalCol]&=~N; // the exit: an opening in the top wall, visible from the start, never marked
@@ -1295,14 +1411,21 @@
     resetBall();updateLevelUI();saveProgress();
     if(width&&height)resize();
   }
-  function paintMaze(){
-    outsideTint=null;
-    mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
+  function paintFloorWash(){
     if(mazeTheme.id==='classic'){const wash=mctx.createLinearGradient(0,H,W,0);wash.addColorStop(0,'rgba(35,119,203,.026)');wash.addColorStop(.53,'rgba(255,255,255,0)');wash.addColorStop(1,'rgba(205,42,121,.027)');mctx.fillStyle=wash;mctx.fillRect(0,0,W,H)}
+  }
+  function wallGradient(){
     const gradient=mctx.createLinearGradient(0,H,W,0);
     if(mazeTheme.id==='classic'){
       gradient.addColorStop(0,'#2879bd');gradient.addColorStop(.27,'#365a9e');gradient.addColorStop(.54,'#713b83');gradient.addColorStop(.76,'#a32f80');gradient.addColorStop(1,'#be2f70');
     }else{gradient.addColorStop(0,mazeTheme.wall1);gradient.addColorStop(1,mazeTheme.wall2)}
+    return gradient;
+  }
+  function paintMaze(){
+    outsideTint=null;
+    mctx.fillStyle=mazeTheme.floor;mctx.fillRect(0,0,W,H);
+    paintFloorWash();
+    const gradient=wallGradient();
     mctx.lineWidth=T;mctx.lineCap='square';mctx.lineJoin='miter';mctx.strokeStyle=gradient;
     mctx.beginPath();
     for(let r=0;r<R;r++)for(let c=0;c<C;c++){
@@ -1319,7 +1442,8 @@
     if(mode==='special'){
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
-    }else{px=S/2;py=H-S/2;}
+    }else if(hexActive()){[px,py]=hexGeom.startPos.slice();}
+    else{px=S/2;py=H-S/2;}
     if(threeDActive()){
       challengeFalls=0;for(const gem of crystals)gem.taken=false;
       threeDWaitNeutral=false;threeDNeutralHold=0;threeDGrace=.55;
@@ -1540,7 +1664,7 @@
     if(tab==='classic')LEVELS.forEach(([cols,rows],i)=>{
       const b=document.createElement('button');b.className='level-tile'+(mode==='classic'&&i===levelIndex?' current':'');
       b.disabled=i>unlocked;b.textContent=String(i+1).padStart(2,'0');
-      const info=document.createElement('small');info.textContent=i>unlocked?'LOCKED':FOG_LEVELS.has(i)?'FOG · '+cols+' × '+rows:`${cols} × ${rows}`;b.appendChild(info);
+      const info=document.createElement('small');info.textContent=i>unlocked?'LOCKED':FOG_LEVELS.has(i)?'FOG · '+cols+' × '+rows:HEX_LEVELS[i]?'HEX · '+(HEX_LEVELS[i].hexagon?'SHAPE':HEX_LEVELS[i].cols+' × '+HEX_LEVELS[i].rows):`${cols} × ${rows}`;b.appendChild(info);
       b.addEventListener('click',async()=>{loadLevel(i,'classic');await beginTilt()});picker.appendChild(b);
     });
     else SPECIALS.forEach((shape,i)=>{
@@ -1686,7 +1810,7 @@
     const rollingFromX=px,rollingFromY=py;
     if(threeDActive())update3D(dt);
     else for(let i=0;i<steps;i++){
-      if(mode==='special')specialMove(dt/steps);
+      if(mode==='special'||hexActive())specialMove(dt/steps);
       else{moveX(dt/steps);moveY(dt/steps)}
     }
     rollBall(px-rollingFromX,py-rollingFromY);updateFogSight();
@@ -1694,7 +1818,7 @@
     const goal=goalPos();
     if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
-  const goalPos=()=>mode==='classic'?[goalCol*S+S/2,S/2]:roundMode?roundGeom.goalPos:cellPos(goalCell);
+  const goalPos=()=>mode==='classic'?(hexActive()?hexGeom.goalPos:[goalCol*S+S/2,S/2]):roundMode?roundGeom.goalPos:cellPos(goalCell);
   // The finish ring is drawn so players can see where to go. Set SHOW_FINISH to false for a hidden-exit mode.
   const SHOW_FINISH=true;
   function drawGoal(time){
@@ -1703,7 +1827,7 @@
     let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,rgba(mazeTheme.finish,.28));aura.addColorStop(1,rgba(mazeTheme.finish,0));ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
     ctx.strokeStyle=mazeTheme.finish;ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
     ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();}
-    const [sx,sy]=mode==='classic'?[S/2,H-S/2]:roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
+    const [sx,sy]=mode==='classic'?(hexActive()?hexGeom.startPos:[S/2,H-S/2]):roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
   }
   function drawRollingSurface(context,r,style,color){
     // Project actual rotated sphere markings into 2D. Only the front hemisphere is drawn.
@@ -2205,6 +2329,7 @@
       px,py,vx,vy,elapsed,route:pathLength,deadEnds,seed,goal:threeDActive()?null:goalPos(),connected:true,hasSensor,sensorSource,sensorProblem,
       tilt:currentTilt(),columns:C,rows:R,threeD:threeDActive(),threeDWaitNeutral,threeDNeutralHold,threeDGrace,
       crystals:crystals.map(c=>({...c})),falls:challengeFalls,platforms:platformMask?platformMask.reduce((n,x)=>n+x,0):0}),
+    hex:()=>hexGeom?{cols:hexGeom.L.cols,rows:hexGeom.L.rows,inc:Array.from(hexGeom.L.inc),open:Array.from(hexGeom.open),start:hexGeom.start,goal:hexGeom.goal,cx:Array.from(hexGeom.L.cx),cy:Array.from(hexGeom.L.cy),W,H}:null,
     walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,platformMask:()=>platformMask?Array.from(platformMask):null,route3D:()=>challengeRoute.slice(),onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
     onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}}),
     profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null,interfaceMode:()=>uiMode,mazeTheme:()=>({...mazeTheme}),
