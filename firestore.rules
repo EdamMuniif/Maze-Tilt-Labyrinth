@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /players_s1/{id} {
+    match /players_s2/{id} {
       allow read: if true;
       allow create: if valid(request.resource.data);
       // A player's total can only go up, and nobody can delete a row.
