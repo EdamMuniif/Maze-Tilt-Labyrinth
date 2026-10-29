@@ -661,7 +661,7 @@
     {id:'cat',name:'Halloween Cat',hint:'Ears, body & curled tail',cols:42,rows:42},
     {id:'star',name:'Star',hint:'Five branching points',cols:39,rows:39},
     {id:'carrot',name:'Carrot',hint:'Diagonal body & leaves',cols:46,rows:43},
-    {id:'threeD',name:'3D Challenge',hint:'Floating paths · 4 crystals',cols:19,rows:15}];
+    {id:'threeD',name:'3D Challenge',hint:'Floating paths · 4 crystals',cols:17,rows:27}];
   let C=LEVELS[0][0],R=LEVELS[0][1],W=C*S,H=R*S;
   const N=1,E=2,SO=4,WE=8;
   const DIRS=[[0,-1,N,SO],[1,0,E,WE],[0,1,SO,N],[-1,0,WE,E]];
@@ -684,7 +684,7 @@
   let wallSegments=[],wallBuckets=new Map(),roundMode=false,roundGeom=null;
   // Independent floating platform topology, deliberately isolated from all existing five specials.
   const CRYSTAL_COUNT=4;
-  let platformMask=null,challengeRoute=[],crystals=[],challengeFalls=0,isoCamX=0,isoCamY=0,challengeThreeD=false;
+  let platformMask=null,challengeRoute=[],crystals=[],challengeFalls=0,isoCamX=0,isoCamY=0,challengeThreeD=false,fallFx=null;
   // V10.1: prevent rapid repeated falls when a tilted phone is held against an open edge.
   // Once fallen, the player must return to the calibrated neutral angle before steering resumes.
   let threeDWaitNeutral=false,threeDNeutralHold=0,threeDGrace=0;
@@ -1131,7 +1131,10 @@
     const previous=new Int32Array(tree.length).fill(-1),dist=new Int32Array(tree.length).fill(-1);
     const queue=[root];dist[root]=0;
     for(let q=0;q<queue.length;q++)for(const b of tree[queue[q]])if(dist[b]<0){dist[b]=dist[queue[q]]+1;previous[b]=queue[q];queue.push(b)}
-    let target=root;for(let i=0;i<dist.length;i++)if(dist[i]>dist[target])target=i;
+    // Portrait: the exit sits on the top row, one of the three farthest top nodes (seeded, so the same for every player).
+    const topNodes=[];for(let i=0;i<cw;i++)topNodes.push(i);
+    topNodes.sort((a,b)=>dist[b]-dist[a]);
+    const target=topNodes[Math.floor(rng()*Math.min(3,topNodes.length))];
     const coarseRoute=[];for(let a=target;a>=0;a=previous[a]){coarseRoute.push(a);if(a===root)break}
     coarseRoute.reverse();
     platformMask=new Uint8Array(C*R);
@@ -1235,7 +1238,7 @@
     if(threeDActive()){
       challengeFalls=0;for(const gem of crystals)gem.taken=false;
       threeDWaitNeutral=false;threeDNeutralHold=0;threeDGrace=.55;
-      isoCamX=px+S*3.4;isoCamY=py-S*1.5;
+      fallFx=null;[isoCamX,isoCamY]=isoTarget();
     }
     vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
     ballQuat=[1,0,0,0];rollingDistance=0;initFog();
@@ -1276,7 +1279,7 @@
   function restrictCamera(){let vw=viewW(),vh=viewH();camX=W>vw?clamp(camX,0,W-vw):(W-vw)/2;camY=H>vh?clamp(camY,0,H-vh):(H-vh)/2;}
   function updateCamera(dt){
     if(threeDActive()){
-      const follow=1-Math.exp(-dt*5.5);isoCamX+=(px+S*3.4-isoCamX)*follow;isoCamY+=(py-S*1.5-isoCamY)*follow;
+      const follow=1-Math.exp(-dt*6),[tx,ty]=isoTarget();isoCamX+=(tx-isoCamX)*follow;isoCamY+=(ty-isoCamY)*follow;
       return;
     }
     const vw=viewW(),vh=viewH();
@@ -1537,6 +1540,7 @@
     if(threeDWaitNeutral)return;
     challengeFalls++;
     bumpCount+=2;
+    fallFx={x:px+vx*.04,y:py+vy*.04,start:performance.now()};
     [px,py]=cellPos(startCell);vx=vy=0;smoothX=smoothY=0;
     threeDWaitNeutral=true;threeDNeutralHold=0;threeDGrace=0;
     // Retain collected crystals and the player's elapsed time and level records.
@@ -1826,6 +1830,15 @@
   $('ballCustomColor').addEventListener('change',paintBallPicker);
   $('skinDone').addEventListener('click',closeBallPicker);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('skinOverlay').classList.contains('hidden'))closeBallPicker()});
+  // 3D camera: about 8 cells across a phone screen, ball kept centred sideways and a little low so the way ahead
+  // (up the screen) is visible. The camera never scrolls past the edge of the maze.
+  const isoScale=()=>clamp(width/(8*S),.8,1.6);
+  function isoTarget(){
+    const sc=isoScale(),spanX=width/sc,spanY=height/(.72*sc),pad=S*1.2;
+    const ax=W>spanX?clamp(px,spanX/2-pad,W-spanX/2+pad):W/2;
+    const ay=H>spanY?clamp(py-S*2.2,spanY/2-pad,H-spanY/2+pad):H/2;
+    return [ax,ay];
+  }
   // Lightweight 3D geometry: each walkable cell has a top and exposed extruded
   // side faces, depth-sorted from back to front, viewed through a fixed angled
   // projection. The physics uses the actual platform mask, not the artwork.
@@ -1834,8 +1847,8 @@
     const backdrop=ctx.createRadialGradient(width*.45,height*.52,0,width*.5,height*.55,Math.max(width,height)*.8);
     backdrop.addColorStop(0,'#15224a');backdrop.addColorStop(.6,'#0a1434');backdrop.addColorStop(1,'#060a1e');
     ctx.fillStyle=backdrop;ctx.fillRect(0,0,width,height);
-    const scale=clamp(Math.min(width/610,height/385),.65,1.38);
-    const project=(x,y,z=0)=>[(x-isoCamX)*scale + (y-isoCamY)*scale*.18+width*.5,(y-isoCamY)*scale*.72-z*scale+height*.53];
+    const scale=isoScale();
+    const project=(x,y,z=0)=>[(x-isoCamX)*scale + (y-isoCamY)*scale*.08+width*.5,(y-isoCamY)*scale*.72-z*scale+height*.53];
     const poly=(points,fill,stroke=null,lineWidth=1)=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}};
     // Depth sorted platforms; no floor is drawn in empty cells.
     const tiles=[];
@@ -1869,7 +1882,14 @@
     const shadow=project(px,py,0),marble=project(px,py,RAD);
     ctx.save();ctx.fillStyle='rgba(4,7,19,.4)';ctx.beginPath();ctx.ellipse(shadow[0]+3*scale,shadow[1]+5*scale,10*scale,5*scale,0,0,2*Math.PI);ctx.fill();
     ballSkin(ctx,marble[0],marble[1],RAD*scale,ballChoice,{glow:true,roll:true});ctx.restore();
+    if(fallFx){
+      const t=(now-fallFx.start)/600;
+      if(t>=1||t<0)fallFx=null;
+      else{const fp=project(fallFx.x,fallFx.y,RAD-t*t*120);
+        ctx.save();ctx.globalAlpha=1-t;ballSkin(ctx,fp[0],fp[1],RAD*scale*(1-.5*t),ballChoice,{glow:false,roll:true});ctx.restore()}
+    }
     // Noninteractive, readable HUD in the dedicated playfield margin.
+    const fade=ctx.createLinearGradient(0,height-46,0,height);fade.addColorStop(0,'rgba(6,10,30,0)');fade.addColorStop(1,'rgba(6,10,30,.88)');ctx.fillStyle=fade;ctx.fillRect(0,height-46,width,46);
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
