@@ -436,6 +436,15 @@
     .view-toggle[aria-pressed="true"] .ic-out{display:none}
     .view-toggle[aria-pressed="true"] .ic-in{display:block}
     body[data-ui-mode="night"] .view-toggle{background:rgba(16,26,56,.55);color:#e9eefc}
+    .orb-picker{position:absolute;left:12px;bottom:calc(100% + 12px);z-index:4;display:flex;gap:8px}
+    .orb-picker.hidden{display:none}
+    .orb-chip{position:relative;width:38px;height:38px;padding:0;border:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);-webkit-tap-highlight-color:transparent}
+    .orb-chip i{display:block;width:21px;height:21px;border-radius:50%;background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.9),var(--c) 46%,var(--d) 100%)}
+    .orb-chip[aria-pressed="true"]{box-shadow:0 0 0 2px var(--c)}
+    .orb-chip:active{transform:scale(.92)}
+    .orb-chip.done{opacity:.6}
+    .orb-chip.done::after{content:"\2713";position:absolute;right:-2px;bottom:-2px;width:15px;height:15px;border-radius:50%;background:#16a374;color:#fff;font-size:10px;line-height:15px;text-align:center;font-weight:700}
+    body[data-ui-mode="night"] .orb-chip{background:rgba(16,26,56,.55)}
     .bottom-bar{gap:8px}
     /* Messages float just above the bar so they never cover the view button. */
     .bottom-bar .toast{top:auto;bottom:calc(100% + 10px);transform:translate(-50%,8px)}
@@ -468,6 +477,7 @@
 </main>
 <footer class="bottom-bar" id="bottomBar">
   <div class="status" id="status" role="status" aria-live="off"><span class="live"></span> TILT ONLY · START → FINISH</div>
+  <div class="orb-picker hidden" id="orbPicker" role="group" aria-label="Choose which ball the camera follows"></div>
   <button type="button" class="view-toggle" id="viewToggle" aria-pressed="false" aria-label="Show the full maze">
     <svg viewBox="0 0 24 24" aria-hidden="true"><g class="ic-out"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></g><g class="ic-in"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></g></svg>
   </button>
@@ -763,7 +773,7 @@
     ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
     :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0];
   let ballChoice={...DEFAULT_BALL},mazeTheme={...DEFAULT_THEME},skinReturnPlaying=false,skinReturnToIntro=false;
-  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')hexActive()?paintHexMaze():paintMaze();else if(!threeDActive())paintSpecialMaze()}}
+  function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')multiActive()?paintSpecialMaze():hexActive()?paintHexMaze():paintMaze();else if(!threeDActive())paintSpecialMaze()}}
 
   const PROFILE_STORE='tilt-labyrinth-v6-profiles';
   const ACTIVE_STORE='tilt-labyrinth-v6-active';
@@ -1360,13 +1370,131 @@
     for(const seg of wallSegments){if(seg===hexGeom.exitSeg)continue;mctx.moveTo(seg[0],seg[1]);mctx.lineTo(seg[2],seg[3])}
     mctx.stroke();
   }
+  // ---- Level 10: three balls in one round maze ------------------------------------------------------------
+  // Ten rings, thirty sectors. The blue, purple and pink balls start on different spots of the outer ring and all answer
+  // to the same tilt, each on its own. A ball that reaches the central chamber is secured there; the level is won when
+  // all three are home. The camera follows one chosen ball, or shows the whole maze.
+  const ORB_RINGS=10,ORB_SECTORS=30,ORB_INNER=140,ORB_START_SECTORS=[9,19,29],ORB_GLIDE=520;
+  const ORB_DEFS=[{id:'blue',name:'Blue',color:'blue',css:'#3b9ee7',dark:'#163c8c'},
+    {id:'purple',name:'Purple',color:'purple',css:'#9a67d8',dark:'#4a237a'},
+    {id:'pink',name:'Pink',color:'custom',custom:'#ff5fa2',css:'#ff5fa2',dark:'#9b1f5c'}];
+  const multiActive=()=>mode==='classic'&&levelIndex===9;
+  let orbs=[],orbFollow=0;
+  const orbChoice=def=>({style:ballChoice.style,color:def.color,customColor:def.custom||ballChoice.customColor});
+  function orbLoad(o){px=o.x;py=o.y;vx=o.vx;vy=o.vy;ballQuat=o.quat;trail=o.trail}
+  function orbSave(o){o.x=px;o.y=py;o.vx=vx;o.vy=vy;o.quat=ballQuat;o.trail=trail}
+  function buildOrbMaze(randomSeed){
+    const rings=ORB_RINGS,sectors=ORB_SECTORS,inner=ORB_INNER,step=2*Math.PI/sectors,outer=inner+rings*S,num=rings*sectors;
+    roundGeom={rings,sectors,inner,outer,step,center:W/2};roundMode=true;activeMask=null;
+    const starts=ORB_START_SECTORS.map(k=>(rings-1)*sectors+k);
+    function neighbors(id){const j=Math.floor(id/sectors),k=id%sectors;
+      return [[j,(k+1)%sectors,E,WE],[j,(k+sectors-1)%sectors,WE,E],[j+1,k,SO,N],[j-1,k,N,SO]]
+        .map(([ring,sector,bit,op])=>ring>=0&&ring<rings?[ring*sectors+sector,bit,op]:null).filter(Boolean);
+    }
+    function distFrom(walls,from){const dist=new Int32Array(num).fill(-1),q=[from];dist[from]=0;
+      for(let t=0;t<q.length;t++)for(const [b,bit] of neighbors(q[t]))if(!(walls[q[t]]&bit)&&dist[b]<0){dist[b]=dist[q[t]]+1;q.push(b)}
+      return {dist,count:q.length};}
+    function trial(trialSeed){
+      const rng=randGen(trialSeed),walls=new Uint8Array(num).fill(15),seen=new Uint8Array(num),stack=[starts[0]];seen[starts[0]]=1;
+      while(stack.length){const a=stack[stack.length-1],opts=neighbors(a).filter(([id])=>!seen[id]);
+        if(!opts.length){stack.pop();continue}
+        const [b,bit,op]=opts[(rng()*opts.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
+      }
+      // The gate into the central chamber is the ring-0 cell that is farthest from the nearest of the three balls.
+      const reach=starts.map(st=>distFrom(walls,st));
+      let gate=0,score=-1;
+      for(let k=0;k<sectors;k++){const m=Math.min(...reach.map(r=>r.dist[k]));if(m>score){score=m;gate=k}}
+      return {walls,gate,score,routes:reach.map(r=>r.dist[gate]),connected:reach[0].count===num};
+    }
+    const rng=randGen(randomSeed);let best=null;
+    for(let i=0;i<30;i++){
+      const t=trial((rng()*0xffffffff)>>>0||1);
+      if(!t.connected)throw Error('Three-ball maze disconnected');
+      if(!best||t.score>best.score)best=t;
+    }
+    grid=best.walls;roundGeom.gate=best.gate;
+    roundGeom.starts=starts.map(st=>polarPoint(inner+(rings-.5)*S,((st%sectors)+.5)*step));
+    roundGeom.startPos=roundGeom.starts[0].slice();roundGeom.goalPos=[W/2,H/2];
+    pathLength=best.routes.reduce((a,b)=>a+b,0)+12;
+    deadEnds=grid.reduce((count,w)=>count+(4-((w&1)!==0)-((w&2)!==0)-((w&4)!==0)-((w&8)!==0)===1?1:0),0);
+    startCell=goalCell=0;
+  }
+  function initOrbs(){
+    const c=roundGeom.center;
+    orbs=ORB_DEFS.map((def,i)=>{const [x,y]=roundGeom.starts[i],a=-Math.PI/2+i*2*Math.PI/3;
+      return {def,x,y,vx:0,vy:0,quat:[1,0,0,0],trail:[],home:false,homeAt:0,from:null,slot:[c+Math.cos(a)*27,c+Math.sin(a)*27]}});
+    orbFollow=0;orbLoad(orbs[0]);renderOrbPicker();
+  }
+  function renderOrbPicker(){
+    const box=$('orbPicker');box.textContent='';
+    orbs.forEach((o,i)=>{
+      const b=document.createElement('button');b.type='button';b.className='orb-chip'+(o.home?' done':'');
+      b.style.setProperty('--c',o.def.css);b.style.setProperty('--d',o.def.dark);
+      b.setAttribute('aria-pressed',String(i===orbFollow));
+      b.setAttribute('aria-label',`Follow the ${o.def.name.toLowerCase()} ball${o.home?' (home)':''}`);
+      b.innerHTML='<i></i>';b.addEventListener('click',()=>followOrb(i));box.appendChild(b);
+    });
+  }
+  function followOrb(i){
+    const o=orbs[i];if(!o||o.home||i===orbFollow&&!zoomFull)return;
+    orbSave(orbs[orbFollow]);orbFollow=i;orbLoad(o);
+    if(zoomFull)setFullView(false);
+    renderOrbPicker();
+  }
+  function updateOrbs(dt){
+    const scale=currentSpeed().factor,accel=650*scale,drag=Math.pow(.91,dt*60),maxSpeed=175*scale;
+    const chamber=roundGeom.inner-RAD-T/2-1,center=roundGeom.center;
+    if(!orbs[orbFollow].home)orbSave(orbs[orbFollow]);
+    trailTimer+=dt;const addTrail=trailTimer>.033;if(addTrail)trailTimer=0;
+    for(let i=0;i<orbs.length;i++){
+      const o=orbs[i];if(o.home)continue;
+      orbLoad(o);bumpMute=i!==orbFollow;
+      vx+=smoothX*accel*dt;vy+=smoothY*accel*dt;vx*=drag;vy*=drag;
+      const speed=Math.hypot(vx,vy);if(speed>maxSpeed){vx*=maxSpeed/speed;vy*=maxSpeed/speed}
+      const steps=Math.max(1,Math.ceil(Math.max(Math.abs(vx),Math.abs(vy))*dt/3)),fromX=px,fromY=py;
+      for(let k=0;k<steps;k++)specialMove(dt/steps);
+      rollBall(px-fromX,py-fromY);
+      if(addTrail){trail.push([px,py]);if(trail.length>22)trail.shift()}
+      if(Math.hypot(px-center,py-center)<chamber){
+        o.home=true;o.homeAt=performance.now();o.from=[px,py];vx=vy=0;
+        const left=orbs.findIndex(x=>!x.home),n=orbs.filter(x=>x.home).length;
+        if(left>=0)toast(`${o.def.name} ball home · ${n}/${orbs.length}`);
+        if(i===orbFollow&&left>=0)orbFollow=left;
+        renderOrbPicker();
+      }
+      orbSave(o);
+    }
+    bumpMute=false;
+    orbLoad(orbs[orbFollow]);
+    const now=performance.now();
+    if(orbs.every(o=>o.home&&now-o.homeAt>ORB_GLIDE))win();
+  }
+  function drawOrbs(){
+    const keepQuat=ballQuat,rank=i=>orbs[i].home?0:i===orbFollow?2:1;
+    const order=orbs.map((_,i)=>i).sort((a,b)=>rank(a)-rank(b)),waiting=orbs.filter(o=>!o.home).length;
+    for(const i of order){
+      const o=orbs[i],choice=orbChoice(o.def),live=i===orbFollow&&!o.home;
+      let x=live?px:o.x,y=live?py:o.y;
+      if(o.home){const k=Math.min(1,(performance.now()-o.homeAt)/ORB_GLIDE),e=1-Math.pow(1-k,3);x=o.from[0]+(o.slot[0]-o.from[0])*e;y=o.from[1]+(o.slot[1]-o.from[1])*e}
+      else{
+        const glow=getBallPalette(choice).glow,list=live?trail:o.trail;
+        for(let t=1;t<list.length;t++){const a=list[t],op=Math.round((t/list.length)*70).toString(16).padStart(2,'0');
+          ctx.fillStyle=glow+op;ctx.beginPath();ctx.arc(a[0],a[1],RAD*(.28+.28*t/list.length),0,Math.PI*2);ctx.fill()}
+      }
+      ballQuat=live?keepQuat:o.quat;
+      ballSkin(ctx,x,y,RAD,choice,{roll:true});
+      if(live&&waiting>1){ctx.strokeStyle=rgba(o.def.css,.85);ctx.lineWidth=1.8/Math.max(.6,Math.min(1.5,zoom));ctx.beginPath();ctx.arc(x,y,RAD+4.5,0,Math.PI*2);ctx.stroke()}
+    }
+    ballQuat=keepQuat;
+  }
   function loadLevel(nextIndex,nextMode=mode){
     mode=nextMode;
     if(mode==='classic'){levelIndex=clamp(nextIndex,0,unlocked);[C,R]=LEVELS[levelIndex];}
     else{specialIndex=clamp(nextIndex,0,SPECIALS.length-1);[C,R]=[SPECIALS[specialIndex].cols,SPECIALS[specialIndex].rows];}
     hexGeom=null;
     const hexLay=mode==='classic'&&HEX_LEVELS[levelIndex]?hexLayout(HEX_LEVELS[levelIndex]):null;
-    if(hexLay){C=hexLay.cols;R=hexLay.rows;W=hexLay.W;H=hexLay.H}else{W=C*S;H=R*S}
+    const orbLevel=mode==='classic'&&levelIndex===9;
+    if(hexLay){C=hexLay.cols;R=hexLay.rows;W=hexLay.W;H=hexLay.H}else{if(orbLevel){C=R=29}W=C*S;H=R*S}
     mazeTexture.width=W;mazeTexture.height=H;
     // A reproducible, level-specific random stream produces a different layout
     // for every level. Restart does NOT change the active maze.
@@ -1376,7 +1504,7 @@
     // identical for every player, so scores stay comparable.
     goalCol=mode==='classic'?Math.min(C-1,(levelRandom()*C)|0):0;
     let candidate=null,chosenSeed=0;
-    for(let i=0;i<(mode==='classic'&&!hexLay?40:0);i++){
+    for(let i=0;i<(mode==='classic'&&!hexLay&&!orbLevel?40:0);i++){
       const trialSeed=(levelRandom()*0xffffffff)>>>0||1;
       const trial=buildMaze(trialSeed,goalCol,mode==='classic'?MAZE_STYLES[levelIndex]:'winding');
       if(!trial.connected||trial.route<0)throw new Error('Maze connectivity invariant failed');
@@ -1387,6 +1515,10 @@
       activeMask=null;roundMode=false;roundGeom=null;
       buildHexMaze(hexLay,HEX_LEVELS[levelIndex],levelRandom);
       constructHexWalls();paintHexMaze();
+    }else if(orbLevel){
+      platformMask=null;
+      const orbSeed=((levelRandom()*0xffffffff)>>>0)||1;seed=orbSeed;
+      buildOrbMaze(orbSeed);constructSpecialWalls();paintSpecialMaze();
     }else if(mode==='classic'){
       activeMask=null;roundMode=false;roundGeom=null;
       grid=candidate.walls;pathLength=candidate.route;deadEnds=candidate.dead;seed=chosenSeed;
@@ -1408,7 +1540,8 @@
         constructSpecialWalls();paintSpecialMaze();
       }
     }
-    resetBall();updateLevelUI();saveProgress();
+    resetBall();if(!multiActive()){orbs=[];$('orbPicker').classList.add('hidden')}
+    updateLevelUI();saveProgress();
     if(width&&height)resize();
   }
   function paintFloorWash(){
@@ -1443,6 +1576,7 @@
       if(roundMode){[px,py]=roundGeom.startPos.slice();}
       else{[px,py]=cellPos(startCell);}
     }else if(hexActive()){[px,py]=hexGeom.startPos.slice();}
+    else if(multiActive()){initOrbs();}
     else{px=S/2;py=H-S/2;}
     if(threeDActive()){
       challengeFalls=0;for(const gem of crystals)gem.taken=false;
@@ -1450,7 +1584,7 @@
       isoCamX=px+S*3.4;isoCamY=py-S*1.5;
     }
     vx=vy=0;elapsed=0;speedAdjustedElapsed=0;bumpCount=0;lastBump=-1;trail=[];trailTimer=0;smoothX=smoothY=0;
-    ballQuat=[1,0,0,0];rollingDistance=0;initFog();
+    ballQuat=[1,0,0,0];rollingDistance=0;initFog();if(multiActive())orbSave(orbs[0]);
     updateClock();camX=px-viewW()/2;camY=py-viewH()/2;restrictCamera();}
   function resize(){width=playfield.clientWidth;height=playfield.clientHeight;dpr=Math.min(window.devicePixelRatio||1,2.5);
     canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
@@ -1501,6 +1635,7 @@
     $('calibrate').disabled=(phase==='intro');
     // Hidden on the 3D level (own camera). On fog levels the full view still shows only what the fog allows.
     $('viewToggle').classList.toggle('hidden',phase==='intro'||threeDActive());
+    $('orbPicker').classList.toggle('hidden',phase==='intro'||!multiActive());
     updateSensorStatus();
   }
   function updateSensorStatus(){
@@ -1518,7 +1653,7 @@
     }
     statusEl.dataset.level=level;
     statusEl.innerHTML='<span class="live"></span>';
-    statusEl.appendChild(document.createTextNode((fogActive()?'FOG CHALLENGE · ':'')+message));
+    statusEl.appendChild(document.createTextNode((fogActive()?'FOG CHALLENGE · ':'')+(multiActive()&&orbs.length?`BALLS ${orbs.filter(o=>o.home).length}/${orbs.length} HOME · `:'')+message));
   }
   function sensorNumber(v,digits=1){return Number.isFinite(v)?v.toFixed(digits):'—'}
   function updateSensorPanel(){
@@ -1664,7 +1799,7 @@
     if(tab==='classic')LEVELS.forEach(([cols,rows],i)=>{
       const b=document.createElement('button');b.className='level-tile'+(mode==='classic'&&i===levelIndex?' current':'');
       b.disabled=i>unlocked;b.textContent=String(i+1).padStart(2,'0');
-      const info=document.createElement('small');info.textContent=i>unlocked?'LOCKED':FOG_LEVELS.has(i)?'FOG · '+cols+' × '+rows:HEX_LEVELS[i]?'HEX · '+(HEX_LEVELS[i].hexagon?'SHAPE':HEX_LEVELS[i].cols+' × '+HEX_LEVELS[i].rows):`${cols} × ${rows}`;b.appendChild(info);
+      const info=document.createElement('small');info.textContent=i>unlocked?'LOCKED':FOG_LEVELS.has(i)?'FOG · '+cols+' × '+rows:i===9?'3 BALLS · ROUND':HEX_LEVELS[i]?'HEX · '+(HEX_LEVELS[i].hexagon?'SHAPE':HEX_LEVELS[i].cols+' × '+HEX_LEVELS[i].rows):`${cols} × ${rows}`;b.appendChild(info);
       b.addEventListener('click',async()=>{loadLevel(i,'classic');await beginTilt()});picker.appendChild(b);
     });
     else SPECIALS.forEach((shape,i)=>{
@@ -1733,7 +1868,8 @@
 
   $('classicTab').addEventListener('click',()=>renderPicker('classic'));
   $('specialTab').addEventListener('click',()=>renderPicker('special'));
-  function hit(){if(elapsed-lastBump>.24){bumpCount++;lastBump=elapsed}}
+  let bumpMute=false;
+  function hit(){if(bumpMute)return;if(elapsed-lastBump>.24){bumpCount++;lastBump=elapsed}}
   function moveX(dt){if(Math.abs(vx)<.0001)return;const c=clamp(Math.floor(px/S),0,C-1),r=clamp(Math.floor(py/S),0,R-1),wall=grid[r*C+c];let next=px+vx*dt;
     if(vx>0&&(wall&E)){const lim=(c+1)*S-RAD-T/2;if(next>lim){next=lim;vx=-vx*.1;hit()}}
     else if(vx<0&&(wall&WE)){const lim=c*S+RAD+T/2;if(next<lim){next=lim;vx=-vx*.1;hit()}}
@@ -1801,6 +1937,7 @@
     smoothY+=(targetY-smoothY)*clamp(dt*13,0,1);
     const magnitude=Math.hypot(smoothX,smoothY);
     if(magnitude>1){smoothX/=magnitude;smoothY/=magnitude}
+    if(multiActive()){updateOrbs(dt);return}
     const movementScale=currentSpeed().factor;
     const accel=650*movementScale;vx+=smoothX*accel*dt;vy+=smoothY*accel*dt;
     const drag=Math.pow(.91,dt*60);vx*=drag;vy*=drag;
@@ -1818,7 +1955,7 @@
     const goal=goalPos();
     if(!threeDActive()&&Math.hypot(px-goal[0],py-goal[1])<10.5)win();
   }
-  const goalPos=()=>mode==='classic'?(hexActive()?hexGeom.goalPos:[goalCol*S+S/2,S/2]):roundMode?roundGeom.goalPos:cellPos(goalCell);
+  const goalPos=()=>mode==='classic'?(multiActive()?roundGeom.goalPos:hexActive()?hexGeom.goalPos:[goalCol*S+S/2,S/2]):roundMode?roundGeom.goalPos:cellPos(goalCell);
   // The finish ring is drawn so players can see where to go. Set SHOW_FINISH to false for a hidden-exit mode.
   const SHOW_FINISH=true;
   function drawGoal(time){
@@ -1827,7 +1964,11 @@
     let aura=ctx.createRadialGradient(x,y,0,x,y,33);aura.addColorStop(0,rgba(mazeTheme.finish,.28));aura.addColorStop(1,rgba(mazeTheme.finish,0));ctx.fillStyle=aura;ctx.beginPath();ctx.arc(x,y,33,0,2*Math.PI);ctx.fill();
     ctx.strokeStyle=mazeTheme.finish;ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(x,y,12.5+Math.sin(time*.002)*.9,0,2*Math.PI);ctx.stroke();
     ctx.fillStyle=mazeTheme.finish;ctx.beginPath();ctx.arc(x,y,5.7,0,2*Math.PI);ctx.fill();ctx.restore();}
+    if(multiActive()){
+      roundGeom.starts.forEach(([sx,sy],i)=>{if(orbs[i]?.home)return;ctx.strokeStyle=rgba(ORB_DEFS[i].css,.7);ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke()});
+    }else{
     const [sx,sy]=mode==='classic'?(hexActive()?hexGeom.startPos:[S/2,H-S/2]):roundMode?roundGeom.startPos:cellPos(startCell);ctx.strokeStyle=mazeTheme.wall1;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(sx,sy,12.7,0,Math.PI*2);ctx.stroke();
+    }
   }
   function drawRollingSurface(context,r,style,color){
     // Project actual rotated sphere markings into 2D. Only the front hemisphere is drawn.
@@ -2085,7 +2226,7 @@
     ctx.textAlign='left';ctx.fillStyle='#a7bbec';ctx.font=`${clamp(10*scale,9,12)}px system-ui,sans-serif`;
     ctx.fillText('3D FLOATING CHALLENGE  ·  TILT TO ROLL',14,height-13);
   }
-  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore()}
+  function draw(now){if(threeDActive()){draw3D(now);return}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=outsideTint||mazeTheme.floor;ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(mazeTexture,0,0);drawGoal(now);paintFog();multiActive()?drawOrbs():drawBall();if(zoomFull){ctx.beginPath();ctx.arc(px,py,RAD*(2.3+.35*Math.sin(now/240)),0,Math.PI*2);ctx.strokeStyle='#e0287d';ctx.lineWidth=2.2/zoom;ctx.stroke()}ctx.restore()}
   function frame(now){let dt=Math.min((now-tLast)/1000,.035);tLast=now;if(phase==='playing')update(dt);updateCamera(dt);draw(now);
     if(now-lastStatusDraw>300){lastStatusDraw=now;updateSensorStatus();updateSensorPanel()}
     requestAnimationFrame(frame)}
@@ -2330,6 +2471,7 @@
       tilt:currentTilt(),columns:C,rows:R,threeD:threeDActive(),threeDWaitNeutral,threeDNeutralHold,threeDGrace,
       crystals:crystals.map(c=>({...c})),falls:challengeFalls,platforms:platformMask?platformMask.reduce((n,x)=>n+x,0):0}),
     hex:()=>hexGeom?{cols:hexGeom.L.cols,rows:hexGeom.L.rows,inc:Array.from(hexGeom.L.inc),open:Array.from(hexGeom.open),start:hexGeom.start,goal:hexGeom.goal,cx:Array.from(hexGeom.L.cx),cy:Array.from(hexGeom.L.cy),W,H}:null,
+    orbs:()=>orbs.map(o=>({id:o.def.id,x:o.x,y:o.y,vx:o.vx,vy:o.vy,home:o.home})),orbGeom:()=>roundGeom?{rings:roundGeom.rings,sectors:roundGeom.sectors,inner:roundGeom.inner,step:roundGeom.step,center:roundGeom.center,gate:roundGeom.gate,starts:roundGeom.starts}:null,orbFollow:()=>orbFollow,followOrb,
     walls:()=>Array.from(grid),mask:()=>activeMask?Array.from(activeMask):null,platformMask:()=>platformMask?Array.from(platformMask):null,route3D:()=>challengeRoute.slice(),onSensor:(beta,gamma)=>sensorEvent({beta,gamma}),
     onGravity:(x,y)=>motionEvent({accelerationIncludingGravity:{x,y}}),
     profiles:()=>structuredClone(profiles),activeProfile:()=>playerProfile?.name||null,interfaceMode:()=>uiMode,mazeTheme:()=>({...mazeTheme}),
