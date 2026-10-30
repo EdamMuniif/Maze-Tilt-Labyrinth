@@ -1396,18 +1396,22 @@
       return {dist,count:q.length};}
     function trial(trialSeed){
       const rng=randGen(trialSeed),walls=new Uint8Array(num).fill(15),seen=new Uint8Array(num),stack=[starts[0]];seen[starts[0]]=1;
+      // Harder than a plain random walk: the carver prefers to run along a ring, so corridors loop all the way round
+      // before a way inward appears, and the routes are far longer.
       while(stack.length){const a=stack[stack.length-1],opts=neighbors(a).filter(([id])=>!seen[id]);
         if(!opts.length){stack.pop();continue}
-        const [b,bit,op]=opts[(rng()*opts.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
+        const along=opts.filter(([id])=>Math.floor(id/sectors)===Math.floor(a/sectors)),pool=along.length&&rng()<.6?along:opts;
+        const [b,bit,op]=pool[(rng()*pool.length)|0];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b);
       }
       // The gate into the central chamber is the ring-0 cell that is farthest from the nearest of the three balls.
       const reach=starts.map(st=>distFrom(walls,st));
       let gate=0,score=-1;
       for(let k=0;k<sectors;k++){const m=Math.min(...reach.map(r=>r.dist[k]));if(m>score){score=m;gate=k}}
-      return {walls,gate,score,routes:reach.map(r=>r.dist[gate]),connected:reach[0].count===num};
+      let dead=0;for(let i=0;i<num;i++)if(4-((walls[i]&1)!==0)-((walls[i]&2)!==0)-((walls[i]&4)!==0)-((walls[i]&8)!==0)===1)dead++;
+      return {walls,gate,score:score+2*dead,routes:reach.map(r=>r.dist[gate]),connected:reach[0].count===num};
     }
     const rng=randGen(randomSeed);let best=null;
-    for(let i=0;i<30;i++){
+    for(let i=0;i<300;i++){
       const t=trial((rng()*0xffffffff)>>>0||1);
       if(!t.connected)throw Error('Three-ball maze disconnected');
       if(!best||t.score>best.score)best=t;
