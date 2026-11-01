@@ -1,5 +1,7 @@
 # ORBRINTH Level 10 — Triple Orb Extreme
 
+**Release status (2026-11-01):** `level10.html` is now committed as a standalone Extreme test page on the main branch. It has NOT replaced the original integrated Classic Level 10. GitHub Pages deployment and real-phone completion remain unverified. The installation steps below document the original test package.
+
 This package contains a standalone test version of a harder circular maze, **not** a replacement for the existing ORBRINTH `index.html`.
 
 ## Features
