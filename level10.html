@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#091327"><title>ORBRINTH — Level 10 Triple Orb Extreme (Test Build)</title>
+<style>
+:root{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#e9f2ff;background:#080f22}
+*{box-sizing:border-box}body{margin:0;overflow:hidden}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #87edfc;outline-offset:2px}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}header{background:#111e3b;border-bottom:1px solid #314367;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;padding:7px 12px;min-height:55px}
+.logo{font-weight:900;letter-spacing:.10em;font-size:14px;background:linear-gradient(95deg,#41cdff,#916eff,#ff4caa);background-clip:text;color:transparent}.sub{font-size:9px;color:#a8b8e5;letter-spacing:.1em}
+.metrics{display:flex;align-items:center;gap:10px;font-size:12px}.metrics strong{font-size:14px}.actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{padding:8px 10px;border-radius:10px;background:#24395d;border:1px solid #4b6389;color:white;font-size:11px;font-weight:700;min-height:36px}.btn:active{background:#405e8d}
+main{position:relative;flex:1;min-height:0}#game{width:100%;height:100%;display:block;touch-action:none}
+#message{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);max-width:min(90vw,520px);background:#13264bdc;border:1px solid #4c6b9e;border-radius:20px;padding:7px 13px;text-align:center;font-size:12px;pointer-events:none;color:#e5f3ff}
+footer{background:#111e3b;border-top:1px solid #314367;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px 10px;font-size:11px;color:#afc3e9;min-height:44px}
+#balls{display:flex;gap:6px}.orbTab{min-width:45px;border-radius:8px;border:1px solid #4a6288;background:#1b3054;color:white;padding:5px 7px;font-size:11px;font-weight:800}.orbTab[aria-pressed="true"]{outline:2px solid white}.orbTab.done{background:#175e56;border-color:#56d8bc}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:#040b18c9;z-index:5}#overlay.hidden{display:none}.modal{width:min(460px,100%);max-height:95%;overflow:auto;background:#152340;border:1px solid #4a5d80;border-radius:23px;padding:25px;box-shadow:0 14px 55px #0008;text-align:center}.eyebrow{color:#9cb8e2;font-size:11px;letter-spacing:.17em;font-weight:800}.modal h1{font-size:clamp(28px,7vw,42px);margin:9px 0;background:linear-gradient(95deg,#34baff,#a572ff,#f43ba4);background-clip:text;color:transparent}.modal p{color:#b4c4dc;line-height:1.5;font-size:14px}.cta{padding:13px;width:100%;border:none;border-radius:14px;color:white;font-weight:800;background:linear-gradient(105deg,#197fdb,#6d59d5,#c52b8c);margin-top:9px}.note{font-size:11px!important}
+@media(max-height:450px){header{padding:4px 10px;min-height:40px}.logo{font-size:12px}.btn{padding:5px 7px;min-height:30px}footer{min-height:34px;padding:4px 10px}.modal{padding:15px}.modal p{font-size:12px}}
+</style></head><body><div id="app">
+<header><div><div class="logo">ORBRINTH · FINAL CIRCLE</div><div class="sub">LEVEL 10 · TRIPLE ORB EXTREME</div></div><div class="metrics"><div>TIME <strong id="clock">00:00</strong></div><div>KEYS <strong id="keyCounter">0 / 3</strong></div><div>GOAL <strong id="goalCounter">0 / 3</strong></div></div><div class="actions"><button class="btn" id="cal">CAL</button><button class="btn" id="zoom">Full maze</button><button class="btn" id="pause">Pause</button><button class="btn" id="retry">Restart</button><button class="btn" id="home">Home</button></div></header>
+<main><canvas id="game" aria-label="Circular labyrinth; tilt your phone to guide all three orbs into the center"></canvas><div id="message">Collect three colored keys, then finish with all three orbs.</div>
+<div id="overlay"><section class="modal"><div class="eyebrow">ORBRINTH · LEVEL 10 PROTOTYPE</div><h1>TRIPLE ORB EXTREME</h1><p>Three orbs share one phone tilt. Navigate 14 rings with 40 sectors, collect each orb’s matching key, then bring all three into the center. Complete the full challenge to win.</p><p class="note">Select orb 1, 2, or 3 below to follow its position. Touch never moves a ball. This independent preview does not alter your saved game scores.</p><button class="cta" id="start">Enable tilt & start</button></section></div></main>
+<footer><div id="balls"><button class="orbTab" id="b0" aria-pressed="true">● 1</button><button class="orbTab" id="b1" aria-pressed="false">● 2</button><button class="orbTab" id="b2" aria-pressed="false">● 3</button></div><div id="sensor">SENSOR: WAITING</div></footer>
+</div>
+<script>
+(()=>{'use strict';
+const S=37,RINGS=14,SECTORS=40,INNER=190,STEP=2*Math.PI/SECTORS,CENTER=INNER+RINGS*S+25,AREA=2*CENTER;
+const N=1,E=2,SO=4,W=8,EPS=.001,BR=9.5;
+const COLORS=['#2bbdf7','#a174ff','#ff4c9c'];
+const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');
+let width=0,height=0,dpr=1,zoom=1,camX=0,camY=0,showAll=false,focus=0,playing=false,finished=false,paused=false,elapsed=0,clockLast=0;
+let sensor=null,baseline=null,sensorTime=0,sensorSource='',warned=false;let maze,segments=[],buckets=new Map(),balls=[],keys=[];
+let paintNeeded=true,staticLayer=document.createElement('canvas'),floorCtx=staticLayer.getContext('2d');staticLayer.width=AREA;staticLayer.height=AREA;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function rng(seed){let a=seed>>>0;return()=>{a+=0x6d2b79f5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+const idx=(j,k)=>j*SECTORS+((k+SECTORS)%SECTORS);
+const pos=(j,k)=>{const a=(k+.5)*STEP,r=INNER+(j+.5)*S;return [CENTER+Math.cos(a)*r,CENTER+Math.sin(a)*r]};
+function neighbors(a){const j=Math.floor(a/SECTORS),k=a%SECTORS;return [ [idx(j,k+1),E,W],[idx(j,k-1),W,E],...(j<RINGS-1?[[idx(j+1,k),SO,N]]:[]),...(j>0?[[idx(j-1,k),N,SO]]:[]) ]}
+// Perfect-maze generator. The selected entrance has one open sector,
+// and all three color keys lie on proven routes from their outer spawns.
+const START_SECTORS=[3,16,29];
+function mazeTry(seed){
+  const rnd=rng(seed),cells=new Uint8Array(RINGS*SECTORS).fill(15),seen=new Uint8Array(cells.length),start=idx(RINGS-1,START_SECTORS[0]),stack=[start];seen[start]=1;
+  while(stack.length){const a=stack[stack.length-1],opts=neighbors(a).filter(([b])=>!seen[b]);
+    if(!opts.length){stack.pop();continue}
+    const [b,bit,opp]=opts[Math.floor(rnd()*opts.length)];cells[a]&=~bit;cells[b]&=~opp;seen[b]=1;stack.push(b);
+  }
+  const starts=START_SECTORS.map(k=>idx(RINGS-1,k));
+  const maps=starts.map(source=>{
+    const dist=new Int16Array(cells.length).fill(-1),parent=new Int16Array(cells.length).fill(-1),queue=[source];dist[source]=0;
+    for(let i=0;i<queue.length;i++){const a=queue[i];for(const [b,bit] of neighbors(a))if(!(cells[a]&bit)&&dist[b]<0){dist[b]=dist[a]+1;parent[b]=a;queue.push(b)}}
+    return {dist,parent,connected:queue.length===cells.length};
+  });
+  let gate=0,score=-Infinity;
+  for(let k=0;k<SECTORS;k++){
+    const lengths=maps.map(m=>m.dist[idx(0,k)]);
+    // Avoid a trivial path for any one ball, prioritize long winding paths.
+    const merit=Math.min(...lengths)*3+lengths.reduce((a,b)=>a+b,0);
+    if(merit>score){score=merit;gate=k;}
+  }
+  const goal=idx(0,gate);
+  const keyCells=maps.map(({parent},ball)=>{
+    const path=[goal];for(let cursor=goal;parent[cursor]>=0;){cursor=parent[cursor];path.push(cursor)}
+    path.reverse();
+    // First key is farther out, third deeper in. Every key lies on its orb's path.
+    const frac=[.32,.50,.68][ball];
+    return path[clamp(Math.round(frac*(path.length-1)),4,path.length-6)];
+  });
+  return {cells,gate,score,keyCells,connected:maps.every(x=>x.connected),pathLengths:maps.map(m=>m.dist[goal])};
+}
+function generate(){let best=null,rand=rng(1701010);for(let a=0;a<25;a++){
+  const candidate=mazeTry((rand()*0xffffffff)>>>0||1);
+  if(!candidate.connected)throw Error('Maze connectivity failed');
+  if(!best||candidate.score>best.score)best=candidate;
+}maze=best;return best}
+function arc(r,a,b){let n=Math.max(2,Math.ceil((b-a)*r/7));for(let t=0;t<n;t++){let p=a+(b-a)*t/n,q=a+(b-a)*(t+1)/n;segment(CENTER+Math.cos(p)*r,CENTER+Math.sin(p)*r,CENTER+Math.cos(q)*r,CENTER+Math.sin(q)*r)}}
+const BUCKET=52;function bucket(a,b){return a+','+b}
+function segment(x1,y1,x2,y2){const seg={x1,y1,x2,y2,dx:x2-x1,dy:y2-y1,len2:(x2-x1)**2+(y2-y1)**2};segments.push(seg);for(let a=Math.floor((Math.min(x1,x2)-20)/BUCKET);a<=Math.floor((Math.max(x1,x2)+20)/BUCKET);a++)for(let b=Math.floor((Math.min(y1,y2)-20)/BUCKET);b<=Math.floor((Math.max(y1,y2)+20)/BUCKET);b++){let k=bucket(a,b),items=buckets.get(k);if(!items)buckets.set(k,items=[]);items.push(seg)}}
+function buildWalls(){segments=[];buckets=new Map();for(let j=0;j<RINGS;j++)for(let k=0;k<SECTORS;k++){let wall=maze.cells[idx(j,k)],a=k*STEP,b=(k+1)*STEP,r=INNER+j*S;
+  if((wall&N)&&!(j===0&&k===maze.gate))arc(r,a,b);
+  if(wall&W)segment(CENTER+Math.cos(a)*r,CENTER+Math.sin(a)*r,CENTER+Math.cos(a)*(r+S),CENTER+Math.sin(a)*(r+S));
+  if(j===RINGS-1)arc(r+S,a,b)}paintNeeded=true;}
+function buildTexture(){const c=floorCtx;c.clearRect(0,0,AREA,AREA);c.fillStyle='#0a1027';c.fillRect(0,0,AREA,AREA);c.beginPath();c.arc(CENTER,CENTER,INNER+RINGS*S,0,Math.PI*2);c.fillStyle='#e8f1ff';c.fill();c.beginPath();c.arc(CENTER,CENTER,INNER-1,0,Math.PI*2);c.fillStyle='#cbd9fd';c.fill();
+  const grad=c.createLinearGradient(80,AREA,AREA,40);grad.addColorStop(0,'#1b8ad9');grad.addColorStop(.5,'#8759dc');grad.addColorStop(1,'#d3368d');c.strokeStyle=grad;c.lineWidth=4.3;c.lineJoin='round';c.lineCap='round';c.beginPath();for(const e of segments){c.moveTo(e.x1,e.y1);c.lineTo(e.x2,e.y2)}c.stroke();paintNeeded=false;}
+function init(){
+  generate();buildWalls();
+  balls=START_SECTORS.map((k,i)=>{const [x,y]=pos(RINGS-1,k);return {x,y,vx:0,vy:0,done:false,key:false,color:COLORS[i],id:i}});
+  keys=maze.keyCells.map((cell,i)=>{const j=Math.floor(cell/SECTORS),k=cell%SECTORS;const [x,y]=pos(j,k);return {x,y,cell,color:COLORS[i],id:i}});
+  elapsed=0;playing=false;finished=false;paused=false;focus=0;showAll=false;baseline=null;
+  updateTabs();$('keyCounter').textContent='0 / 3';$('goalCounter').textContent='0 / 3';$('clock').textContent='00:00';
+  $('message').textContent='Collect each orb’s key, then reach the center.';resize();
+}
+function updateTabs(){balls.forEach((b,i)=>{let t=$('b'+i);t.classList.toggle('done',b.done);t.setAttribute('aria-pressed',String(focus===i));t.textContent=(b.done?'✓ ':b.key?'◆ ':'● ')+(i+1)})}
+function satCollision(ball){const list=buckets.get(bucket(Math.floor(ball.x/BUCKET),Math.floor(ball.y/BUCKET)))||[];let got=false;
+  for(let z=0;z<3;z++){let any=false;for(const e of list){const t=clamp(((ball.x-e.x1)*e.dx+(ball.y-e.y1)*e.dy)/e.len2,0,1);const cx=e.x1+t*e.dx,cy=e.y1+t*e.dy;let dx=ball.x-cx,dy=ball.y-cy,r=Math.hypot(dx,dy);const min=BR+2.5;
+    if(r>=min-EPS)continue;const nx=r>EPS?dx/r:-e.dy/Math.sqrt(e.len2),ny=r>EPS?dy/r:e.dx/Math.sqrt(e.len2);ball.x+=nx*(min-r+.025);ball.y+=ny*(min-r+.025);const dot=ball.vx*nx+ball.vy*ny;if(dot<0){ball.vx-=dot*1.08*nx;ball.vy-=dot*1.08*ny}got=any=true}if(!any)break}return got;}
+function tilt(){if(!sensor||!baseline||performance.now()-sensorTime>2000)return [0,0];const d=(a,b)=>{let v=a-b;while(v>180)v-=360;while(v< -180)v+=360;return v},angle=(screen.orientation?.angle??window.orientation??0)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
+ const x=d(sensor.gamma,baseline.gamma),y=d(sensor.beta,baseline.beta),norm=v=>Math.sign(v)*clamp((Math.abs(v)-1.1)/12,0,1);return [norm(x*c-y*s),norm(x*s+y*c)];}
+const RECORD_KEY='orbrinth-triple-orb-extreme-v1';
+function saveFinalTime(){
+  try{
+    const current=Number(localStorage.getItem(RECORD_KEY));
+    if(!current||elapsed<current)localStorage.setItem(RECORD_KEY,String(elapsed));
+  }catch(_){/* Offline or private mode: gameplay remains available. */}
+}
+function update(dt){
+  if(!playing||paused||finished)return;
+  elapsed+=dt;
+  const [tx,ty]=tilt();
+  for(const ball of balls){
+    if(ball.done)continue;
+    ball.vx+=tx*610*dt;ball.vy+=ty*610*dt;
+    const drag=Math.pow(.90,dt*60);ball.vx*=drag;ball.vy*=drag;
+    let speed=Math.hypot(ball.vx,ball.vy);
+    if(speed>154){ball.vx*=154/speed;ball.vy*=154/speed}
+    const steps=Math.max(1,Math.ceil(speed*dt/2.5));
+    for(let n=0;n<steps;n++){ball.x+=ball.vx*dt/steps;ball.y+=ball.vy*dt/steps;satCollision(ball)}
+    const key=keys[ball.id];
+    if(!ball.key&&Math.hypot(ball.x-key.x,ball.y-key.y)<=S*.43){
+      ball.key=true;updateTabs();$('keyCounter').textContent=balls.filter(b=>b.key).length+' / 3';
+      $('message').textContent=`Orb ${ball.id+1}: key collected — now reach the center`;
+    }
+    if(ball.key&&Math.hypot(ball.x-CENTER,ball.y-CENTER)<INNER-12){
+      ball.done=true;ball.vx=ball.vy=0;ball.x=CENTER;ball.y=CENTER;
+      focus=balls.findIndex(b=>!b.done);if(focus<0)focus=0;updateTabs();
+      $('goalCounter').textContent=balls.filter(b=>b.done).length+' / 3';
+      $('message').textContent=`Orb ${ball.id+1} secured · ${3-balls.filter(b=>b.done).length} remaining`;
+    }
+  }
+  if(balls.every(b=>b.done)){
+    finished=true;playing=false;saveFinalTime();
+    showModal('TRIPLE ORB EXTREME CLEARED',`All 3 keys and all 3 orbs completed in ${timeFormat(elapsed)}! This is a standalone test version.`, 'Play again');
+  }
+  $('clock').textContent=timeFormat(elapsed);
+}
+const timeFormat=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function resize(){const rect=canvas.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);camera();}
+function camera(){const auto=showAll?Math.min(width,height)/AREA*.93:Math.min(width/(S*11),height/(S*9));zoom=clamp(auto,.12,2.3);let target=balls[focus]||balls[0];if(showAll){camX=CENTER-width/(zoom*2);camY=CENTER-height/(zoom*2)}else{camX=clamp(target.x-width/(zoom*2),0,Math.max(0,AREA-width/zoom));camY=clamp(target.y-height/(zoom*2),0,Math.max(0,AREA-height/zoom));}}
+function draw(){if(paintNeeded)buildTexture();camera();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080e20';ctx.fillRect(0,0,width,height);ctx.save();ctx.translate(-camX*zoom,-camY*zoom);ctx.scale(zoom,zoom);ctx.drawImage(staticLayer,0,0);ctx.strokeStyle='#dd33a4';ctx.lineWidth=3;ctx.beginPath();ctx.arc(CENTER,CENTER,INNER*.60,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#dd33a4';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText('3 ORBS',CENTER,CENTER+6);
+ for(const key of keys){if(balls[key.id].key)continue;ctx.save();ctx.translate(key.x,key.y);ctx.rotate(Math.PI/4);ctx.shadowColor=key.color;ctx.shadowBlur=14;ctx.fillStyle=key.color;ctx.fillRect(-6,-6,12,12);ctx.strokeStyle='#fff';ctx.lineWidth=1.3;ctx.strokeRect(-6,-6,12,12);ctx.restore()}
+ for(const b of balls){if(b.done)continue;const g=ctx.createRadialGradient(b.x-4,b.y-4,1,b.x,b.y,BR*2);g.addColorStop(0,'white');g.addColorStop(.25,b.color);g.addColorStop(1,b.color+'00');ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,BR*2,0,2*Math.PI);ctx.fill();ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x,b.y,BR,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x-3,b.y-4,3,0,2*Math.PI);ctx.fill();if(b.id===focus){ctx.strokeStyle='#0b1324';ctx.lineWidth=2;ctx.beginPath();ctx.arc(b.x,b.y,BR+4,0,2*Math.PI);ctx.stroke()}}
+ ctx.restore();}
+let prev=0;function frame(now){const dt=Math.min(.04,(now-prev)/1000||0);prev=now;update(dt);draw();requestAnimationFrame(frame)}
+function sample(e){if(!Number.isFinite(e.beta)||!Number.isFinite(e.gamma))return;sensor={beta:e.beta,gamma:e.gamma};sensorTime=performance.now();if(!baseline)baseline={...sensor};$('sensor').textContent='ORIENTATION LIVE'}
+function gravity(e){if(performance.now()-sensorTime<1100)return;const g=e.accelerationIncludingGravity;if(!g||!Number.isFinite(g.x)||!Number.isFinite(g.y))return;sensor={gamma:Math.asin(clamp(g.x/9.81,-1,1))*180/Math.PI,beta:Math.asin(clamp(g.y/9.81,-1,1))*180/Math.PI};sensorTime=performance.now();if(!baseline)baseline={...sensor};$('sensor').textContent='GRAVITY FALLBACK'}
+let listeners=false;async function allowSensors(){try{if(!isSecureContext)throw new Error('Open the game using HTTPS, not as a downloaded file');if(typeof DeviceOrientationEvent==='undefined')throw new Error('This browser has no motion orientation API');if(typeof DeviceOrientationEvent.requestPermission==='function'){let p=await DeviceOrientationEvent.requestPermission();if(p!=='granted')throw new Error('Motion permission not granted')}
+ if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){let p=await DeviceMotionEvent.requestPermission();if(p!=='granted')$('sensor').textContent='Orientation only'}
+ if(!listeners){addEventListener('deviceorientation',sample);addEventListener('devicemotion',gravity);listeners=true}baseline=null;playing=true;paused=false;$('overlay').classList.add('hidden');$('message').textContent='Tilt gently · all three balls move together';}catch(e){$('message').textContent=e.message;$('sensor').textContent='SENSOR ERROR';alert(e.message)}}
+function showModal(title,description,label){$('overlay').classList.remove('hidden');document.querySelector('.modal h1').textContent=title;document.querySelector('.modal p').textContent=description;$('start').textContent=label;}
+$('start').addEventListener('click',()=>{if(finished)init();allowSensors()});$('cal').addEventListener('click',()=>{if(sensor){baseline={...sensor};balls.forEach(b=>{b.vx=b.vy=0});$('message').textContent='Calibration complete: hold phone comfortably'}else $('message').textContent='Waiting for real sensor readings';});
+$('zoom').addEventListener('click',()=>{showAll=!showAll;$('zoom').textContent=showAll?'Follow ball':'Full maze'});$('retry').addEventListener('click',()=>{init();allowSensors()});$('home').addEventListener('click',()=>{location.href='./'});$('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Resume':'Pause';$('message').textContent=paused?'Paused':'Tilt gently to continue'});
+balls=[];for(let i=0;i<3;i++)$('b'+i).addEventListener('click',()=>{focus=i;updateTabs()});
+addEventListener('resize',resize);screen.orientation?.addEventListener?.('change',()=>{baseline=null;$('message').textContent='Screen rotated: recalibrate phone'});document.addEventListener('visibilitychange',()=>{if(document.hidden){paused=true;$('pause').textContent='Resume'}});init();requestAnimationFrame(frame);
+window.__orbrinthPrototype={maze:()=>({rings:RINGS,sectors:SECTORS,connected:maze.connected,gate:maze.gate,score:maze.score,keys:maze.keyCells,pathLengths:maze.pathLengths}),balls:()=>balls.map(b=>({x:b.x,y:b.y,done:b.done,key:b.key,vx:b.vx,vy:b.vy})),injectSensor:(beta,gamma)=>sample({beta,gamma}),startTest:()=>{playing=true;paused=false;$('overlay').classList.add('hidden')},focus:i=>{focus=i}};
+})();
+</script></body></html>
