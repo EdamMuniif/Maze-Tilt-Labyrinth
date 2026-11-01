@@ -233,6 +233,12 @@ function draw(t){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=saved.theme==='
 }
 function tick(t){const dt=Math.min(.038,Math.max(0,(t-tPrev)/1000||0));tPrev=t;if(ui==='playing')step(dt);draw(t);$('hint').textContent=(sensor&&performance.now()-sensorAt<2400?`TILT LIVE · ${Math.round(tilt()[0]*100)}% / ${Math.round(tilt()[1]*100)}%`:'SENSOR WAITING')+(rearm?' · RETURN TO NEUTRAL':'');requestAnimationFrame(tick)}
 $('cal').onclick=()=>{calibrationReset();lastEvent='Tilt calibrated'};$('pause').onclick=pause;$('home').onclick=home;document.addEventListener('visibilitychange',()=>{if(document.hidden&&ui==='playing')pause()});window.addEventListener('blur',()=>{if(ui==='playing')pause()});window.addEventListener('resize',resize);window.addEventListener('orientationchange',calibrationReset);
-document.body.classList.toggle('day',saved.theme==='day');resize();home();requestAnimationFrame(tick);
+document.body.classList.toggle('day',saved.theme==='day');
+resize();
+// A level chosen from the main ORBRINTH selector opens its briefing first.
+const requestedStage=Number(new URLSearchParams(location.search).get('level'));
+if(Number.isInteger(requestedStage)&&requestedStage>=11&&requestedStage<=25)brief(requestedStage);
+else home();
+requestAnimationFrame(tick);
 })();
 </script></body></html>
