@@ -134,6 +134,8 @@
     .skin-styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
     .skin-style{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 3px;border:2px solid #e3e1ee;background:#faf9fe;border-radius:11px;color:#414f74;font-weight:850;font-size:11px}
     .skin-style[aria-pressed="true"]{background:#eeeafb;border-color:#7555c1;color:#392c74}
+    .eye-group-label{grid-column:1/-1;margin:6px 0 2px;padding:7px 0;border-top:1px solid #cbd0e1;color:#8f3a62;font-size:10px;font-weight:850;letter-spacing:.055em}
+    body[data-ui-mode="night"] .eye-group-label{border-color:#445276;color:#f2acc9}
     .skin-style canvas{display:block;width:57px;height:57px}
     .skin-finish{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:11px;background:linear-gradient(105deg,#236cc9,#7643aa 70%,#c52e80);color:white;font-weight:850}
     @media (orientation:landscape) and (max-height:480px){.skin-dialog{width:min(93vw,530px);padding:12px 17px;max-height:96dvh}.skin-dialog h2{font-size:19px;margin:4px 0}.skin-dialog p{font-size:10px;margin-bottom:4px}.skin-preview{display:none}#ballPreview{height:66px;width:112px}.skin-label{margin:6px 0 4px}.skin-style canvas{width:40px;height:40px}.skin-style{font-size:9px;padding:3px}.skin-color{min-height:33px}.skin-swatch{height:22px;width:22px}.skin-finish{margin-top:8px;padding:7px}}
@@ -733,9 +735,20 @@
     {id:'purple',name:'Amethyst',light:'#f3e4ff',mid:'#9a67d8',dark:'#4a237a',glow:'#a567f5'},
     {id:'orange',name:'Orange',light:'#ffe9c7',mid:'#ef842b',dark:'#994317',glow:'#f59537'}
   ];
+  const EYE_SKINS=[
+    {id:'eye-triad',name:'Crimson Triad',mid:'#d8172b',light:'#ff7286',dark:'#320811',glow:'#ef214d'},
+    {id:'eye-vortex',name:'Vortex Eye',mid:'#c91425',light:'#ff7b83',dark:'#250712',glow:'#ea2740'},
+    {id:'eye-atom',name:'Atomic Eye',mid:'#d5162d',light:'#ff6377',dark:'#290715',glow:'#ee2457'},
+    {id:'eye-astral',name:'Astral Eye',mid:'#cc122a',light:'#ff6984',dark:'#310917',glow:'#e93162'},
+    {id:'eye-orbit',name:'Orbital Eye',mid:'#d42839',light:'#f56d79',dark:'#2c0614',glow:'#f13c56'},
+    {id:'eye-ember',name:'Amber Cross',mid:'#f28516',light:'#ffe77d',dark:'#581b0a',glow:'#fb9c1a'},
+    {id:'eye-amethyst',name:'Violet Eye',mid:'#9340d9',light:'#e5a6ff',dark:'#250e4e',glow:'#a15bff'},
+    {id:'eye-reactor',name:'Reactor Eye',mid:'#d11927',light:'#ff6e80',dark:'#310711',glow:'#f53f53'}
+  ];
   const BALL_STYLES=[
     {id:'glass',name:'Glass'},{id:'metal',name:'Metal'},{id:'neon',name:'Neon'},
-    {id:'soccer',name:'Football'},{id:'basketball',name:'Basketball'},{id:'eight',name:'8-Ball'}
+    {id:'soccer',name:'Football'},{id:'basketball',name:'Basketball'},{id:'eight',name:'8-Ball'},
+    ...EYE_SKINS.map(({id,name})=>({id,name}))
   ];
   const hexColor=(v,fallback)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v)?v.toLowerCase():fallback;
   const toRGB=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
@@ -771,9 +784,10 @@
     style:BALL_STYLES.some(c=>c.id===value?.style)?value.style:DEFAULT_BALL.style,
     customColor:hexColor(value?.customColor,DEFAULT_BALL.customColor)
   }}
-  const getBallPalette=choice=>choice.color==='custom'
-    ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
-    :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0];
+  const getBallPalette=choice=>EYE_SKINS.find(e=>e.id===choice.style)||
+    (choice.color==='custom'
+      ?{id:'custom',name:'Custom',mid:choice.customColor,light:mixColor(choice.customColor,'#ffffff',.75),dark:mixColor(choice.customColor,'#061126',.69),glow:choice.customColor}
+      :BALL_COLORS.find(c=>c.id===choice.color)||BALL_COLORS[0]);
   let ballChoice={...DEFAULT_BALL},mazeTheme={...DEFAULT_THEME},skinReturnPlaying=false,skinReturnToIntro=false;
   function setTheme(next){mazeTheme=normalizeTheme(next);document.querySelector('.playfield').style.backgroundColor=mazeTheme.floor;if(grid){if(mode==='classic')multiActive()?paintSpecialMaze():hexActive()?paintHexMaze():paintMaze();else if(!threeDActive())paintSpecialMaze()}}
 
@@ -2033,6 +2047,74 @@
       spot([.84,.25,.48],.10,rgba(color.light,.65));
     }
   }
+  // Original spherical eye patterns. Geometry is projected through ballQuat, the
+  // game's existing displacement-driven rotation: no separate spin animation.
+  function drawEyeSurface(c,r,style,rolling){
+    const eye=EYE_SKINS.find(e=>e.id===style);if(!eye)return;
+    const tau=Math.PI*2,ink='#100610';
+    const p=(x,y)=>{
+      if(x*x+y*y>=.985)return null;
+      const z=Math.sqrt(1-x*x-y*y);
+      const q=rolling?rotateBallPoint(x,y,z):[x,y,z];
+      return q[2]>.045?[q[0]*r,q[1]*r]:null;
+    };
+    function path(pts,color,width,filled=false){
+      const points=pts.map(q=>p(...q));
+      c.beginPath();let open=false;
+      for(let i=0;i<points.length;i++){
+        const q=points[i];
+        if(!q){if(open&&!filled){c.stroke();c.beginPath()}open=false;continue}
+        if(!open){c.moveTo(...q);open=true}else c.lineTo(...q);
+      }
+      if(filled){
+        if(points.some(q=>!q))return;
+        c.closePath();c.fillStyle=color;c.fill();
+      }else if(open){c.strokeStyle=color;c.lineWidth=Math.max(.6,width*r);c.lineCap='round';c.lineJoin='round';c.stroke();}
+    }
+    const arc=(cx,cy,rx,ry,a,b,n=72)=>Array.from({length:n+1},(_,j)=>[cx+rx*Math.cos(a+(b-a)*j/n),cy+ry*Math.sin(a+(b-a)*j/n)]);
+    const ring=(v,w=.05)=>path(arc(0,0,v,v,0,tau),ink,w);
+    const disk=(x,y,v,color)=>path(arc(x,y,v,v,0,tau,42),color,0,true);
+    const rotated=(pt,a)=>[pt[0]*Math.cos(a)-pt[1]*Math.sin(a),pt[0]*Math.sin(a)+pt[1]*Math.cos(a)];
+    // The iris fibers provide a visible depth cue on a rolling sphere.
+    for(let j=0;j<48;j++){
+      const a=j*tau/48,reach=.65+.065*Math.sin(j*2.4);
+      path([[.40*Math.cos(a),.40*Math.sin(a)],[reach*Math.cos(a),reach*Math.sin(a)]],j%3?'#18071e33':'#ffe6f922',.016);
+    }
+    ring(.78,.055);
+    if(style==='eye-triad'||style==='eye-vortex'){
+      const blade=style==='eye-triad'?[[.09,-.16],[.21,-.47],[.38,-.72],[.52,-.45],[.42,-.10],[.11,.18],[-.09,.10]]:
+        [[.07,-.14],[.25,-.56],[.65,-.69],[.46,-.42],[.40,-.14],[.12,.21],[-.05,.20]];
+      for(let k=0;k<3;k++)path(blade.map(q=>rotated(q,k*tau/3)),ink,0,true);
+      disk(0,0,.18,eye.mid);ring(.24,.04);
+    }else if(style==='eye-atom'||style==='eye-astral'){
+      for(let k=0;k<3;k++){
+        const a=k*Math.PI/3;
+        path(arc(0,0,.70,.30,0,tau).map(q=>rotated(q,a)),ink,style==='eye-astral'?.060:.040);
+      }
+      if(style==='eye-astral')for(let k=0;k<3;k++)
+        path([[.06,-.13],[.13,-.48],[0,-.77],[-.13,-.48],[-.06,-.13]].map(q=>rotated(q,k*tau/3)),ink,0,true);
+      disk(0,0,.17,ink);
+    }else if(style==='eye-orbit'||style==='eye-reactor'){
+      ring(.65,style==='eye-reactor'?.095:.04);
+      for(let k=0;k<3;k++){
+        const a=-Math.PI/2+k*tau/3,x=.65*Math.cos(a),y=.65*Math.sin(a);
+        disk(x,y,style==='eye-reactor'?.16:.13,ink);
+        disk(x,y,style==='eye-reactor'?.08:.05,eye.mid);
+      }
+      disk(0,0,.18,ink);
+    }else if(style==='eye-ember'){
+      for(let k=0;k<4;k++)path([[.08,-.08],[.12,-.45],[0,-.78],[-.12,-.45],[-.08,-.08]].map(q=>rotated(q,k*Math.PI/2)),ink,0,true);
+      disk(0,0,.18,ink);
+    }else if(style==='eye-amethyst'){
+      ring(.74,.047);ring(.46,.047);
+      for(let k=0;k<6;k++){
+        const a=k*tau/6,rad=k%2?.46:.73;
+        disk(rad*Math.cos(a),rad*Math.sin(a),.095,ink);
+      }
+      disk(0,0,.18,ink);
+    }
+    const q=p(-.10,-.13);if(q){c.fillStyle='#ffffffa0';c.beginPath();c.arc(q[0],q[1],r*.05,0,tau);c.fill()}
+  }
   function ballSkin(context,x,y,r,choice,{glow=true,roll=false}={}){
     const color=getBallPalette(choice),style=choice.style;
     context.save();context.translate(x,y);
@@ -2040,7 +2122,10 @@
       aura.addColorStop(0,color.glow+'50');aura.addColorStop(1,color.glow+'00');
       context.fillStyle=aura;context.beginPath();context.arc(0,0,r*2.5,0,Math.PI*2);context.fill();}
     let grad=context.createRadialGradient(-r*.37,-r*.44,r*.08,0,0,r);
-    if(style==='metal'){
+    if(EYE_SKINS.some(e=>e.id===style)){
+      grad.addColorStop(0,color.light);grad.addColorStop(.27,color.mid);
+      grad.addColorStop(.78,color.mid);grad.addColorStop(1,color.dark);
+    }else if(style==='metal'){
       grad.addColorStop(0,'#ffffff');grad.addColorStop(.24,'#e6ebf4');grad.addColorStop(.47,color.mid);grad.addColorStop(.66,'#eef0f5');grad.addColorStop(1,'#4a556d');
     }else if(style==='neon'){
       grad.addColorStop(0,color.light);grad.addColorStop(.27,color.mid);grad.addColorStop(.66,color.dark);grad.addColorStop(1,'#0a132d');
@@ -2055,7 +2140,8 @@
     context.fillStyle=grad;context.beginPath();context.arc(0,0,r,0,Math.PI*2);context.fill();
     context.shadowBlur=0;context.shadowOffsetY=0;
     context.save();context.beginPath();context.arc(0,0,r*.96,0,Math.PI*2);context.clip();
-    if(!roll&&style==='soccer'){
+    if(EYE_SKINS.some(e=>e.id===style))drawEyeSurface(context,r,style,roll);
+    else if(!roll&&style==='soccer'){
       const patch=(cx,cy,rad,rotation)=>{context.beginPath();for(let i=0;i<5;i++){
         const a=rotation+Math.PI*2*i/5-Math.PI/2;const xx=cx+rad*Math.cos(a),yy=cy+rad*Math.sin(a);
         if(i===0)context.moveTo(xx,yy);else context.lineTo(xx,yy);}context.closePath();context.fill();};
@@ -2077,7 +2163,7 @@
       context.fillStyle='#ffffff55';context.fillRect(-r,-r*.51,r*2,r*.1);
       context.fillStyle='#151f3844';context.fillRect(-r,r*.45,r*2,r*.1);
     }
-    if(roll)drawRollingSurface(context,r,style,color);
+    if(roll&&!EYE_SKINS.some(e=>e.id===style))drawRollingSurface(context,r,style,color);
     context.restore();
     context.strokeStyle=style==='soccer'?'#bcc5d3':color.light;context.lineWidth=Math.max(.7,r*.065);
     context.beginPath();context.arc(0,0,r*.975,0,Math.PI*2);context.stroke();
@@ -2115,6 +2201,10 @@
       button.addEventListener('click',()=>{ballChoice.color=c.id;persistBallChoice();paintBallPicker()});colors.appendChild(button);
     }
     for(const style of BALL_STYLES){
+      if(style.id===EYE_SKINS[0].id){
+        const label=document.createElement('div');label.className='eye-group-label';
+        label.textContent='EYE ORBS · fixed signature colors · rolling patterns';styles.appendChild(label);
+      }
       const button=document.createElement('button');button.type='button';button.className='skin-style';
       button.setAttribute('aria-label',style.name);button.setAttribute('aria-pressed',String(ballChoice.style===style.id));
       const preview=document.createElement('canvas');preview.width=72;preview.height=72;
