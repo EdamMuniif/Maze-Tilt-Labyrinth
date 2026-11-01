@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0c1430"><title>ORBRINTH — The Unknown Chapters · Levels 11–25</title>
+<style>
+:root{--navy:#0c1430;--card:#14213d;--stroke:#33466b;--ink:#f2f6ff;--sub:#adbbd5;--cyan:#43d8ff;--pink:#ee4eaf;--purple:#9065fb}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--navy);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:2px solid #46dcff;outline-offset:2px}
+#shell{position:fixed;inset:0;display:flex;flex-direction:column;background:#081229}header{flex:none;min-height:68px;background:#101c38;display:flex;gap:12px;justify-content:space-between;align-items:center;padding:8px max(10px,env(safe-area-inset-right));border-bottom:1px solid #314466;position:relative;z-index:2}
+.brand{min-width:0}.brand strong{display:block;font-size:clamp(12px,2.2vw,18px);letter-spacing:.10em;white-space:nowrap;background:linear-gradient(100deg,#45daff,#8367fc,#ff4cae);background-clip:text;color:transparent}.brand small{display:block;color:#98aad0;letter-spacing:.12em;font-size:10px;margin-top:4px}
+.stats{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.stat{display:flex;flex-direction:column;min-width:65px;gap:2px}.stat span{font-size:10px;color:#8f9fc3;letter-spacing:.06em;font-weight:700}.stat strong{font-size:16px;font-variant-numeric:tabular-nums}
+button.icon-btn{background:#203254;border:1px solid #435b83;color:#eff6ff;border-radius:10px;font-size:12px;font-weight:700;min-height:40px;padding:6px 12px}
+#field{flex:1;position:relative;overflow:hidden;min-height:0;background:#071122}#maze{width:100%;height:100%;touch-action:none;display:block}#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:#f55e77}#flash.hit{animation:hitflash .22s linear}@keyframes hitflash{0%{opacity:.23}100%{opacity:0}}
+footer{flex:none;min-height:46px;display:flex;align-items:center;justify-content:space-between;padding:7px 12px calc(7px + env(safe-area-inset-bottom));gap:12px;background:#101d3b;border-top:1px solid #334466;color:#aebdd9;font-size:11px}#status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}#hint{text-align:right;max-width:45%;font-variant-numeric:tabular-nums;color:#7ce2fc}
+#modal{position:fixed;inset:0;z-index:8;background:rgba(3,8,24,.87);backdrop-filter:blur(9px);display:flex;justify-content:center;align-items:center;padding:clamp(12px,3vw,26px)}#modal[hidden]{display:none}
+.panel{width:min(96vw,610px);max-height:min(94dvh,850px);overflow:auto;background:#14203a;border:1px solid #405172;border-radius:25px;padding:clamp(18px,4vw,30px);box-shadow:0 22px 80px #0007}.eyebrow{color:#ab89fd;font-size:11px;letter-spacing:.18em;font-weight:800;text-transform:uppercase}.logo{font-size:clamp(32px,6vw,56px);font-weight:950;line-height:1.07;letter-spacing:-.055em;margin:15px 0 3px;background:linear-gradient(105deg,#21baff,#796bff 55%,#f343a9);background-clip:text;color:transparent}.tagline{letter-spacing:.23em;color:#c4d3f1;font-size:12px;margin:6px 0 19px}.panel h2{font-size:clamp(23px,4vw,33px);line-height:1.17;margin:10px 0}.panel p{line-height:1.55;color:#bfcae1;margin:11px 0 16px}.panel .summary{font-size:13px;color:#dbe5fc}.chips{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 18px}.chip{border:1px solid #485f8b;background:#203454;color:#dceaff;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700}
+.primary{background:linear-gradient(110deg,#176edc,#7456c9,#d82d94);border:0;color:white;border-radius:14px;padding:15px 18px;font-weight:850;font-size:15px;min-height:48px;box-shadow:0 12px 35px #172e6b60}.secondary{background:#243759;color:#e5efff;border:1px solid #445a80;border-radius:14px;padding:14px;font-weight:750;min-height:47px}.actions{display:grid;gap:8px;margin-top:17px}.actions.duo{grid-template-columns:1fr 1fr}.actions.sticky{position:sticky;bottom:-8px;background:#14203a;padding:8px 0 4px;z-index:4}.day .actions.sticky{background:#f7faff}
+.levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:16px 0}.level{background:#233657;color:#ebf4ff;border:1px solid #3c527c;border-radius:12px;padding:8px 4px;min-height:61px;font-size:17px;font-weight:900}.level small{display:block;font-size:8px;font-weight:650;margin-top:5px;color:#b5c8e3}.level.done{border-color:#3ccbb8;color:#68f4ce}.level.selected{border:2px solid #b183fb}
+#message{font-weight:800;color:#fff;margin-top:9px}.note{font-size:11px;color:#91a2c9;margin-top:13px}.progress{margin:12px 0 4px;font-variant-numeric:tabular-nums;font-weight:800;color:#58daff}
+.player-row{display:flex;gap:8px;align-items:center;margin:8px 0 13px}.player-row label{font-size:11px;font-weight:800;color:#a3b7de;white-space:nowrap}.player-row input{min-width:0;flex:1;border:1px solid #456187;border-radius:10px;background:#091b35;color:#f1f6ff;padding:10px 11px;font:inherit;font-size:14px}.player-row button{border:1px solid #4b6389;border-radius:10px;background:#263e64;color:#e8f6ff;font:inherit;font-size:12px;font-weight:800;min-height:39px;padding:8px 11px}.day .player-row input{background:#fff;color:#1b385a;border-color:#bfd1e6}.day .player-row button{background:#e7eefb;color:#294b78;border-color:#bfd1e6}
+.day{background:#f9fbff;color:#152341}.day #shell{background:#f0f4ff}.day header,.day footer{background:#eaf0ff;border-color:#c9d7eb;color:#3b5179}.day .stat span,.day .brand small{color:#516c92}.day .stat strong{color:#243960}.day #field{background:#e5effc}.day button.icon-btn{background:#fff;color:#274877;border-color:#b7c9e4}.day .panel{background:#f7faff;color:#172844;border-color:#d6e0f0}.day .panel p,.day .panel .summary{color:#405673}.day .tagline{color:#4d658e}.day .level{background:#e8effc;color:#213d68;border-color:#bdd0eb}.day .level small{color:#5b7397}.day .chip{background:#edf4ff;color:#28436b;border-color:#c2d4ed}.day .secondary{background:#e7eefc;color:#243d62;border-color:#bdd0eb}.day .note{color:#516888}.day #modal{background:#0b1a4190}
+@media(max-width:680px){header{gap:5px;min-height:57px;padding:5px 7px}.brand small{font-size:8px}.stats{gap:5px}.stat{min-width:48px}.stat span{font-size:8px}.stat strong{font-size:12px}button.icon-btn{padding:4px 8px;min-height:34px;font-size:11px}footer{font-size:9px;min-height:36px}.levels{gap:5px}.level{min-height:55px}}
+@media(orientation:landscape) and (max-height:540px){header{min-height:45px}.brand small{display:none}.panel{width:min(94vw,850px);max-height:95dvh;padding:12px 22px}.logo{font-size:30px;margin:3px 0}.tagline{margin:0 0 7px}.panel p{margin:6px 0;line-height:1.35}.panel h2{font-size:22px;margin:5px 0}.chips{margin:7px 0}.levels{margin:7px 0}.level{min-height:45px}.actions{margin-top:8px}.actions button{min-height:38px;padding:9px}.note{margin-top:8px}footer{min-height:30px}}
+</style></head><body>
+<div id="shell"><header>
+  <div class="brand"><strong>ORBRINTH · CHAPTER II</strong><small>LEVELS 11–25 · TILT INTO THE UNKNOWN</small></div>
+  <div class="stats"><div class="stat"><span>LEVEL</span><strong id="levelNumber">11/25</strong></div><div class="stat"><span>TIME</span><strong id="time">00:00</strong></div><div class="stat"><span>HEALTH</span><strong id="health">●●●●●</strong></div><button class="icon-btn" id="cal">CAL</button><button class="icon-btn" id="pause">Ⅱ</button><button class="icon-btn" id="home">⌂</button></div>
+</header><main id="field"><canvas id="maze" aria-label="Tilt your phone to guide the marble through the maze. Touch only operates menus."></canvas><div id="flash"></div></main><footer><div id="status">SELECT A LEVEL TO START · GYRO ONLY</div><div id="hint">SENSOR WAITING</div></footer></div>
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><section class="panel"><div class="eyebrow" id="eyebrow">THE UNKNOWN CHAPTERS</div><h1 class="logo" id="modalTitle">ORBRINTH</h1><div class="tagline" id="subtitle">TILT INTO THE UNKNOWN</div><div id="contents"></div></section></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),canvas=$('maze'),ctx=canvas.getContext('2d'),field=$('field'),overlay=$('modal'),contents=$('contents');
+const SIZE=36, N=1,E=2,S=4,W=8,DIRS=[[0,-1,N,S],[1,0,E,W],[0,1,S,N],[-1,0,W,E]],BALL=8.6,HALF=2.5,SEED=13469027;
+const Z=(x,a,b)=>Math.max(a,Math.min(b,x)),rng=(a)=>()=>{a|=0;a=(a+0x6d2b79f5)|0;let t=Math.imul(a^(a>>>15),1|a);t^=t+Math.imul(t^(t>>>7),61|t);return ((t^(t>>>14))>>>0)/4294967296};
+const STAGES=[
+ [11,'The Crosswind',17,19,0,0,0,0,0,4,'Long winding corridors and misleading dead ends.'],
+ [12,'Twin Rifts',19,19,1,0,0,0,0,4,'Touch a wormhole to teleport to its partner.'],
+ [13,'Veil of Turns',19,21,0,1,0,0,0,3,'Your surroundings appear as you move.'],
+ [14,'Edgefall',21,21,0,0,5,0,0,4,'Dark floor openings send you back to the start.'],
+ [15,'Rift in the Mist',21,23,2,1,0,0,0,3,'Navigate fog and jump between linked wormholes.'],
+ [16,'The Maw',23,23,0,0,0,1,0,4,'Avoid the roaming hunter; it follows corridors.'],
+ [17,'Fragile Glass',23,25,0,0,0,0,1,4,'Wall impacts lower your health and vibrate the phone.'],
+ [18,'Void Hunter',25,25,0,0,8,1,1,4,'Avoid pits, wall damage, and the hunter.'],
+ [19,'Four Portals',25,27,4,1,0,0,0,3,'Wormhole pairs are color-coded; learn their exits.'],
+ [20,'Eclipse',27,27,1,1,5,1,1,3,'A fog-covered maze with every turn a risk.'],
+ [21,'Rift Gauntlet',27,29,2,0,10,2,1,4,'Two hunters prowl while unstable floors collapse.'],
+ [22,'Night Vision',29,29,1,1,8,2,1,2,'Your visibility is extremely limited.'],
+ [23,'Wormhole Riot',29,31,4,1,12,2,1,3,'Multiple exits, hunters, gaps, and damaged marble.'],
+ [24,'Abyss Spiral',31,31,3,1,16,3,1,2,'Three hunters patrol an enormous dark labyrinth.'],
+ [25,'The Unknown',33,33,4,1,20,3,1,2,'Final exam: survive every hazard and find the exit.']
+];
+const stages=STAGES.map(([num,name,cols,rows,portals,fog,pits,hunters,damage,vision,desc])=>({num,name,cols,rows,portals,fog:!!fog,pits,hunters,damage:!!damage,vision,desc}));
+const STORE='orbrinth-chapter2-v2',empty=()=>({best:{},times:{},completed:{},theme:'night'});
+const nameSafe=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const cleanName=x=>String(x||'').trim().replace(/[^a-zA-Z0-9 _-]/g,'').slice(0,18)||'Player';
+const playerKey=x=>cleanName(x).toLowerCase();
+let archive;try{archive=JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){archive={}}
+if(!archive||typeof archive!=='object'||!archive.players)archive={players:{},active:'',theme:'night'};
+let originalPlayer=null;
+try{const profiles=JSON.parse(localStorage.getItem('tilt-labyrinth-v6-profiles')||'{}');
+ const active=localStorage.getItem('tilt-labyrinth-v6-active');if(active&&profiles[active])originalPlayer=cleanName(profiles[active].name)}catch(_){/* Original records are read-only. */}
+let activeName=cleanName(archive.active||originalPlayer||'Player');
+const recordFor=name=>{const k=playerKey(name);if(!archive.players[k])archive.players[k]=empty();return archive.players[k]};
+let saved=recordFor(activeName);
+const save=()=>{archive.active=activeName;try{localStorage.setItem(STORE,JSON.stringify(archive))}catch(_){}};
+let ui='home',stage=null,maze=null,ball={x:0,y:0,vx:0,vy:0},sec=0,health=5,maxHealth=5,attempts=0,wallHits=0,pickups=0,warps=0,invuln=0,warpCD=0,fallGrace=0,rearm=false,rearmTime=0,seen=null,visible=null,senseCell=-1,positionCam={x:0,y:0},sensor=null,baseline=null,sensorAt=0,permissionRequested=false,tPrev=0,hitAt=-100,enemyAt=0,pausedFrom='playing',width=0,height=0,dpr=1,scale=1,currentLevel=11,lastEvent='';
+const pad=n=>String(n).padStart(2,'0'),clock=t=>`${pad(Math.floor(t/60))}:${pad(Math.floor(t%60))}`;
+const levelKey=n=>String(n),fmt=n=>Math.round(n).toLocaleString('en-US');
+const cell=(x,y,c)=>y*c+x,coords=(id,c)=>[id%c,Math.floor(id/c)],inside=(x,y,c,r)=>x>=0&&y>=0&&x<c&&y<r;
+function neighbors(m,id){const [x,y]=coords(id,m.cols),out=[];for(const [dx,dy,bit] of DIRS){const xx=x+dx,yy=y+dy;if(inside(xx,yy,m.cols,m.rows)&&!(m.walls[id]&bit))out.push(cell(xx,yy,m.cols))}return out}
+function shortest(m,start,goal){const q=[start],dist=new Int32Array(m.cols*m.rows).fill(-1),par=new Int32Array(dist.length).fill(-1);dist[start]=0;for(let t=0;t<q.length;t++){const a=q[t];for(const b of neighbors(m,a))if(dist[b]<0){dist[b]=dist[a]+1;par[b]=a;q.push(b)}}const path=[];if(dist[goal]>=0)for(let a=goal;a!==-1;a=par[a]){path.push(a);if(a===start)break}return{distance:dist[goal],path:path.reverse(),reached:q.length}}
+function buildGrid(p,seed){const cols=p.cols,rows=p.rows,count=cols*rows,start=cell(0,rows-1,cols),goal=cell(cols-1,0,cols);let best=null;
+ for(let attempt=0;attempt<(p.num===25?42:6);attempt++){
+  const random=rng((seed+attempt*2654435761)>>>0),walls=new Uint8Array(count).fill(15),seen=new Uint8Array(count),stack=[start];seen[start]=1;
+  while(stack.length){const a=stack[stack.length-1],x=a%cols,y=Math.floor(a/cols),possible=[];for(const [dx,dy,bit,op] of DIRS){const xx=x+dx,yy=y+dy;if(inside(xx,yy,cols,rows)){const b=cell(xx,yy,cols);if(!seen[b])possible.push([b,bit,op])}}
+   if(!possible.length){stack.pop();continue}const [b,bit,op]=possible[Math.floor(random()*possible.length)];walls[a]&=~bit;walls[b]&=~op;seen[b]=1;stack.push(b)}
+  const m={cols,rows,walls,start,goal},result=shortest(m,start,goal);if(result.distance<0||result.reached!==count)throw Error('Maze not connected');if(!best||result.distance>best.path.length-1)best={m,path:result.path};
+ }const m=best.m; m.path=best.path;m.routeSet=new Set(m.path);m.pits=new Set();m.gates=[];m.enemies=[];const random=rng(seed^0x55c3a47f);
+ const candidates=Array.from({length:count},(_,i)=>i).filter(i=>i!==start&&i!==goal&&!m.routeSet.has(i)&&Math.abs((i%cols)-(start%cols))+Math.abs(Math.floor(i/cols)-Math.floor(start/cols))>5);
+ for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]]}
+ // Traps occupy optional off-route branches, never the guaranteed path.
+ for(const i of candidates){if(m.pits.size>=p.pits)break;if(neighbors(m,i).length===1)m.pits.add(i)}
+ for(const i of candidates){if(m.pits.size>=p.pits)break;if(!m.pits.has(i))m.pits.add(i)}
+ // Wormhole endpoints are safe, widely spaced, and never occupy the start, goal or pits.
+ const gateCells=best.path.filter((i,idx)=>idx>10&&idx<best.path.length-10&&idx%3===0&&!m.pits.has(i));
+ const taken=new Set([start,goal]);for(let j=0;j<p.portals;j++){
+  const a=gateCells[Math.floor((j+.2)/(p.portals+1)*gateCells.length)],b=gateCells[Math.floor((j+.82)/(p.portals+1)*gateCells.length)];
+  if(a===undefined||b===undefined||a===b||taken.has(a)||taken.has(b))continue;
+  m.gates.push({a,b,color:['#44d7ff','#af7aff','#ff6dbc','#ffce6d'][j%4]});taken.add(a);taken.add(b)
+ }
+ for(let i=0;i<p.hunters;i++){
+  const options=candidates.filter(id=>!m.pits.has(id)&&!taken.has(id));if(!options.length)break;
+  const startCell=options[Math.floor((i+.33)/(p.hunters+1)*options.length)];m.enemies.push({cell:startCell,spawn:startCell,x:startCell%cols+.5,y:Math.floor(startCell/cols)+.5,t:0,stunned:2.1+i*.5,heading:0});taken.add(startCell);
+ }
+ // Open edges are additional fall hazards on optional boundary branches only.
+ // Their cells are never on the guaranteed solution route or a portal/pit/enemy spawn.
+ m.edgeGaps=[];
+ if(p.pits){
+   const boundary=candidates.filter(id=>!m.pits.has(id)&&!taken.has(id)&&!m.routeSet.has(id)&&(
+     id%cols===0||id%cols===cols-1||Math.floor(id/cols)===0||Math.floor(id/cols)===rows-1));
+   const targetCount=Math.min(p.num>=23?4:p.num>=19?3:2,boundary.length);
+   for(const id of boundary){if(m.edgeGaps.length>=targetCount)break;
+     const x=id%cols,y=Math.floor(id/cols);const bit=x===0?W:x===cols-1?E:y===0?N:S;
+     // Keep gaps spaced apart; do not turn an adjacent border stretch into a single long opening.
+     if(m.edgeGaps.some(e=>Math.abs((e.id%cols)-x)+Math.abs(Math.floor(e.id/cols)-y)<4))continue;
+     m.walls[id]&=~bit;m.edgeGaps.push({id,bit});taken.add(id);
+   }
+ }
+ return m;
+}
+function beginStage(n){currentLevel=n;stage=stages.find(s=>s.num===n);maze=buildGrid(stage,(SEED^Math.imul(stage.num,0x9e3779b9))>>>0);ball={x:.5,y:maze.rows-.5,vx:0,vy:0};seen=new Uint8Array(maze.rows*maze.cols);visible=new Uint8Array(seen.length);senseCell=-1;health=maxHealth=n>=21?7:5;sec=0;attempts=0;wallHits=0;warps=0;invuln=1.2;warpCD=0;fallGrace=1;rearm=false;rearmTime=0;enemyAt=0;updateFog(true);renderHUD();calibrationReset();}
+function hazards(p){const a=[];if(p.portals)a.push(`${p.portals} wormhole ${p.portals===1?'pair':'pairs'}`);if(p.fog)a.push(`Fog · ${p.vision}-step sight`);if(p.pits)a.push(`${p.pits} falling tiles + open edges`);if(p.hunters)a.push(`${p.hunters} roaming ${p.hunters===1?'hunter':'hunters'}`);if(p.damage)a.push('Wall damage + haptics');return a.length?a:['Pure maze challenge']}
+function setModal(eyebrow,title,subtitle,html){$('eyebrow').textContent=eyebrow;$('modalTitle').textContent=title;$('subtitle').textContent=subtitle;contents.innerHTML=html;overlay.hidden=false}
+function home(){ui='home';pauseMotion();const complete=Object.keys(saved.completed).filter(k=>saved.completed[k]).length;
+ let list=stages.map(p=>`<button class="level ${saved.completed[p.num]?'done':''}" data-stage="${p.num}">${p.num}<small>${saved.completed[p.num]?'CLEARED':p.fog?'FOG':p.hunters?'HUNTER':p.portals?'WARP':'MAZE'}</small></button>`).join('');
+ setModal('LEVELS 11–25 · CHAPTER II','ORBRINTH','TILT INTO THE UNKNOWN',`<p class="summary">15 challenging gyro-only levels with safe wormholes, fog, falling floor tiles and open edges, roaming hunters and wall-impact damage.</p><div class="player-row"><label for="playerName">PLAYER</label><input id="playerName" maxlength="18" value="${activeName}" aria-label="Your player nickname"><button id="switchPlayer">Switch</button></div><div class="progress">${complete}/15 completed · ${Object.keys(saved.best).length} best scores recorded</div><div class="levels">${list}</div><div class="actions duo"><button class="secondary" id="themeToggle">${saved.theme==='night'?'☀ Day Mode':'☾ Night Mode'}</button><button class="primary" id="startNewest">Start Level 11</button></div><div class="note">Play any level to test the expansion. Scores are local to this browser; no global leaderboard is claimed. Main ORBRINTH records are not modified. Switch nicknames to keep separate records on one device.</div><details style="margin-top:12px"><summary style="font-size:12px;color:#83dfff;font-weight:800;cursor:pointer">Leaderboard on this device</summary><div id="localRank" style="margin-top:7px;font-size:12px;line-height:1.7">${Object.entries(archive.players).map(([name,data])=>({name,points:Object.values(data.best||{}).reduce((a,b)=>a+Number(b||0),0)})).sort((a,b)=>b.points-a.points).slice(0,10).map((x,i)=>`<div style=\"border-bottom:1px solid #354568;padding:3px 0\">${i+1}. ${nameSafe(x.name)} · ${fmt(x.points)} pts</div>`).join('')}</div></details><div style="margin-top:14px"><a href="./" style="color:#86c9ff;font-weight:750;font-size:12px">← Return to ORBRINTH Levels 1–10 (when hosted together)</a></div>`);
+ contents.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>brief(Number(b.dataset.stage))));$('startNewest').onclick=()=>brief(11);$('switchPlayer').onclick=()=>{activeName=cleanName($('playerName').value);saved=recordFor(activeName);save();home()};$('themeToggle').onclick=()=>{saved.theme=saved.theme==='night'?'day':'night';save();document.body.classList.toggle('day',saved.theme==='day');home()};
+}
+function brief(n){beginStage(n);ui='brief';const p=stage;const already=saved.best[n]?`Personal best: ${fmt(saved.best[n])} points · Best time ${clock(saved.times[n]||0)}`:'No completion recorded yet';
+ setModal('BEFORE LEVEL '+n,`${pad(n)} · ${p.name}`,'TILT INTO THE UNKNOWN',`<p class="summary">${p.desc}</p><div class="chips">${hazards(p).map(x=>`<span class="chip">${x}</span>`).join('')}</div><p><strong>Objective:</strong> roll the marble from the blue start to the pink goal. Tilt your phone to steer. No touch/drag movement. Wormholes move you to linked locations. Dark holes and marked open boundary edges cause a fall. Avoid the original <strong>Maw</strong> hunter. Wall impacts cost health on damage levels; supported Android devices vibrate briefly.</p><p>Health: <strong>${maxHealth} points</strong>. If health reaches zero, the ball returns to the start and your attempt count increases. Fog slowly reveals connected corridors. The timer continues through retries.</p><div class="note">${already}</div><div class="actions duo sticky"><button class="secondary" id="backLevels">All levels</button><button class="primary" id="startTilt">Enable tilt & play</button></div>`);
+ $('backLevels').onclick=home;$('startTilt').onclick=enableTilt;
+}
+function pauseMotion(){ball.vx=ball.vy=0}
+function pause(){if(ui!=='playing')return;ui='paused';pauseMotion();setModal('GAME PAUSED',`${pad(currentLevel)} · ${stage.name}`,'ORBRINTH · CHAPTER II',`<p>Resume with the same maze layout, score, and timer. You can recalibrate after resuming.</p><div class="actions"><button class="primary" id="resume">Resume with tilt</button><button class="secondary" id="restartLevel">Restart this level</button><button class="secondary" id="backHome">Home / Levels</button></div>`);$('resume').onclick=()=>{ui='playing';overlay.hidden=true;calibrationReset();};$('restartLevel').onclick=()=>brief(currentLevel);$('backHome').onclick=home;}
+const angleDelta=(a,b)=>{let d=a-b;while(d>180)d-=360;while(d< -180)d+=360;return d},deviceAngle=()=>{const a=screen.orientation?.angle;return Number.isFinite(a)?a:Number(window.orientation)||0};
+function tilt(){if(!sensor||!baseline||performance.now()-sensorAt>2400)return[0,0];const dx=angleDelta(sensor.gamma,baseline.gamma),dy=angleDelta(sensor.beta,baseline.beta),angle=deviceAngle()*Math.PI/180;const sx=dx*Math.cos(angle)-dy*Math.sin(angle),sy=dx*Math.sin(angle)+dy*Math.cos(angle),norm=v=>Math.sign(v)*Z((Math.abs(v)-1.3)/11,0,1);return[norm(sx),norm(sy)]}
+function calibrationReset(){baseline=sensor?{...sensor}:null;ball.vx=ball.vy=0}
+function acceptSensor(sample){if(!Number.isFinite(sample.beta)||!Number.isFinite(sample.gamma))return;sensor=sample;sensorAt=performance.now();if(!baseline)baseline={...sample}}
+window.addEventListener('deviceorientation',e=>acceptSensor({beta:e.beta,gamma:e.gamma}));
+window.addEventListener('devicemotion',e=>{if(sensor&&performance.now()-sensorAt<700)return;const g=e.accelerationIncludingGravity;if(g&&Number.isFinite(g.x)&&Number.isFinite(g.y)&&Number.isFinite(g.z)){const az=Math.abs(g.z)<.01?.01:g.z;acceptSensor({gamma:Math.atan2(g.x,az)*180/Math.PI,beta:Math.atan2(g.y,az)*180/Math.PI})}});
+async function enableTilt(){if(!window.isSecureContext){$('message').textContent='Tilt requires HTTPS or localhost.';return}
+ try{
+  if(!permissionRequested){const req=[];if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')req.push(DeviceOrientationEvent.requestPermission());if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')req.push(DeviceMotionEvent.requestPermission());permissionRequested=true;if(req.length){const p=await Promise.allSettled(req);if(!p.some(x=>x.status==='fulfilled'&&x.value==='granted')){$('message')?.remove();const el=document.createElement('p');el.id='message';el.textContent='Motion permission not granted. Allow it in Safari settings and try again.';contents.prepend(el);return}}}
+  ui='playing';overlay.hidden=true;calibrationReset();tPrev=performance.now();
+ }catch(e){const el=document.createElement('p');el.id='message';el.textContent='Motion permission blocked: '+String(e.message||e);contents.prepend(el)}
+}
+function renderHUD(){$('levelNumber').textContent=`${currentLevel}/25`;$('time').textContent=clock(sec);$('health').textContent='●'.repeat(health)+'○'.repeat(maxHealth-health);$('health').style.color=health<=2?'#ff6b83':'#70dfc6';$('status').textContent=`${stage.name.toUpperCase()} · ${hazards(stage).slice(0,2).join(' · ').toUpperCase()} · ATTEMPTS ${attempts}`;}
+function vibrate(ms=32){try{navigator.vibrate?.(ms)}catch(_){}}
+function damage(reason){if(invuln>0||ui!=='playing')return;if(reason==='Wall')wallHits++;health=Math.max(0,health-1);invuln=.9;vibrate(reason==='Wall'?25:55);const f=$('flash');f.classList.remove('hit');void f.offsetWidth;f.classList.add('hit');lastEvent=reason+' -1 health';if(health===0)respawn('Health depleted');}
+function respawn(reason){attempts++;ball.x=.5;ball.y=maze.rows-.5;ball.vx=ball.vy=0;health=maxHealth;invuln=1.8;warpCD=1.3;fallGrace=1.5;rearm=true;rearmTime=0;maze.enemies.forEach((e,i)=>{e.cell=e.spawn;e.x=e.cell%maze.cols+.5;e.y=Math.floor(e.cell/maze.cols)+.5;e.stunned=2.5+i*.7});lastEvent=reason+' · return to neutral';vibrate(75)}
+const obstacle=(m,ix,iy,bit)=>{if(!inside(ix,iy,m.cols,m.rows))return true;return !!(m.walls[cell(ix,iy,m.cols)]&bit)};
+function moveAxis(axis,delta){const b=ball,m=maze;let val=b[axis],other=axis==='x'?'y':'x',target=val+delta;
+ // Point movement with a circular ball against the cell walls on each axis. Substeps prevent tunnelling.
+ const x=axis==='x'?val:b.x,y=axis==='y'?val:b.y;
+ const c=Math.floor(x),r=Math.floor(y),radius=BALL/SIZE;
+ // Rolling beyond a marked open outside edge drops the marble, just like a floor hole.
+ // Only cells expressly opened by buildGrid can trigger this; the verified route stays safe.
+ if(fallGrace<=0 && m.edgeGaps.length){
+   const cellId=cell(Z(c,0,m.cols-1),Z(r,0,m.rows-1),m.cols);
+   const gap=m.edgeGaps.find(e=>e.id===cellId);
+   if(gap){
+     const limit=radius+HALF/SIZE;
+     if((axis==='x'&&gap.bit===W&&delta<0&&target<=limit)||
+        (axis==='x'&&gap.bit===E&&delta>0&&target>=m.cols-limit)||
+        (axis==='y'&&gap.bit===N&&delta<0&&target<=limit)||
+        (axis==='y'&&gap.bit===S&&delta>0&&target>=m.rows-limit)){
+       respawn('Rolled off an open maze edge');return;
+     }
+   }
+ }
+ if(axis==='x'){
+  if(delta>0 && obstacle(m,c,r,E)) target=Math.min(target,c+1-radius-HALF/SIZE);
+  if(delta<0 && obstacle(m,c,r,W)) target=Math.max(target,c+radius+HALF/SIZE);
+  target=Z(target,radius+HALF/SIZE,m.cols-radius-HALF/SIZE);
+ }else{
+  if(delta>0 && obstacle(m,c,r,S)) target=Math.min(target,r+1-radius-HALF/SIZE);
+  if(delta<0 && obstacle(m,c,r,N)) target=Math.max(target,r+radius+HALF/SIZE);
+  target=Z(target,radius+HALF/SIZE,m.rows-radius-HALF/SIZE);
+ }
+ if(Math.abs(target-(val+delta))>0.0002){b[axis==='x'?'vx':'vy']*=-.075;if(stage.damage)damage('Wall');else if(performance.now()-hitAt>160){vibrate(13);hitAt=performance.now();wallHits++}}
+ if(rearm)return; // A fatal wall impact has already respawned the marble.
+ b[axis]=target;
+ // Collision against perpendicular wall segments in adjacent cells: conservative correction if close to a junction.
+ const cx=Math.floor(b.x),cy=Math.floor(b.y),gap=radius+HALF/SIZE;
+ for(let row=Math.max(0,cy-1);row<=Math.min(m.rows-1,cy+1);row++)for(let col=Math.max(0,cx-1);col<=Math.min(m.cols-1,cx+1);col++){
+  const id=cell(col,row,m.cols),walls=m.walls[id];for(const [bit,x1,y1,x2,y2] of [[N,col,row,col+1,row],[W,col,row,col,row+1],[E,col+1,row,col+1,row+1],[S,col,row+1,col+1,row+1]]){
+   if(!(walls&bit))continue;const ddx=x2-x1,ddy=y2-y1,t=Z(((b.x-x1)*ddx+(b.y-y1)*ddy)/(ddx*ddx+ddy*ddy),0,1),px=x1+t*ddx,py=y1+t*ddy;let diffX=b.x-px,diffY=b.y-py,dist=Math.hypot(diffX,diffY);
+   if(dist<gap&&dist>.00001){const extra=gap-dist+.00005;b.x+=extra*diffX/dist;b.y+=extra*diffY/dist;b.vx*=.7;b.vy*=.7;if(stage.damage)damage('Wall');if(rearm)return}
+  }
+ }
+}
+function checkHazards(){if(fallGrace>0)return;const id=cell(Z(Math.floor(ball.x),0,maze.cols-1),Z(Math.floor(ball.y),0,maze.rows-1),maze.cols),x=id%maze.cols+.5,y=Math.floor(id/maze.cols)+.5;
+ if(maze.pits.has(id)&&Math.hypot(ball.x-x,ball.y-y)<.39){respawn('Fell through the floor');return}
+ if(warpCD<=0)for(const g of maze.gates){let dest=null;if(g.a===id)dest=g.b;else if(g.b===id)dest=g.a;if(dest!==null&&Math.hypot(ball.x-x,ball.y-y)<.27){const [xx,yy]=coords(dest,maze.cols);ball.x=xx+.5;ball.y=yy+.5;ball.vx=ball.vy=0;warpCD=1.25;invuln=Math.max(invuln,.35);warps++;lastEvent='Wormhole activated';vibrate(19);updateFog(true);return}}
+ if(id===maze.goal&&Math.hypot(ball.x-(maze.cols-.5),ball.y-.5)<.36)finish();
+}
+function enemyAI(dt){if(!maze.enemies.length)return;enemyAt+=dt;for(const e of maze.enemies)e.stunned=Math.max(0,e.stunned-dt);if(enemyAt<.62)return;enemyAt=0;
+ const pId=cell(Z(Math.floor(ball.x),0,maze.cols-1),Z(Math.floor(ball.y),0,maze.rows-1),maze.cols);
+ for(const e of maze.enemies){if(e.stunned>0)continue;const path=shortest(maze,e.cell,pId).path;if(path.length>1&&path.length<=16){const next=path[1];if(!maze.pits.has(next)){e.heading=Math.atan2(Math.floor(next/maze.cols)-Math.floor(e.cell/maze.cols),next%maze.cols-e.cell%maze.cols);e.cell=next;e.x=next%maze.cols+.5;e.y=Math.floor(next/maze.cols)+.5}}else if(path.length>16){const ns=neighbors(maze,e.cell).filter(n=>!maze.pits.has(n));if(ns.length){e.cell=ns[(Math.floor(sec/.62)+e.spawn)%ns.length];e.x=e.cell%maze.cols+.5;e.y=Math.floor(e.cell/maze.cols)+.5}}
+  if(Math.hypot(e.x-ball.x,e.y-ball.y)<.73){damage('Hunter');e.stunned=3.5;if(health>0){ball.vx=ball.vy=0}}}
+}
+function updateFog(force=false){if(!stage?.fog)return;const pos=cell(Z(Math.floor(ball.x),0,maze.cols-1),Z(Math.floor(ball.y),0,maze.rows-1),maze.cols);if(!force&&pos===senseCell)return;senseCell=pos;visible.fill(0);const q=[pos],dist=new Int16Array(maze.cols*maze.rows).fill(-1);dist[pos]=0;for(let i=0;i<q.length;i++){const a=q[i];visible[a]=1;seen[a]=1;if(dist[a]>=stage.vision)continue;for(const b of neighbors(maze,a)){if(dist[b]>=0)continue;dist[b]=dist[a]+1;q.push(b)}}}
+function finish(){if(ui!=='playing')return;ui='won';vibrate([80,50,110]);const base=1100+stage.num*180,points=Math.max(250,Math.round(base+maze.path.length*5+4000/(1+sec/75)-attempts*275-wallHits*7));const key=levelKey(stage.num);if(points>Number(saved.best[key]||0))saved.best[key]=points;if(!saved.times[key]||sec<saved.times[key])saved.times[key]=sec;saved.completed[key]=true;save();
+ const next=stage.num<25?stage.num+1:null;setModal('LEVEL CLEARED',`${stage.num} · COMPLETE`,'TILT INTO THE UNKNOWN',`<p class="summary">The unknown yields to you. All objectives completed.</p><div class="chips"><span class="chip">Score ${fmt(points)}</span><span class="chip">Best ${fmt(saved.best[key])}</span><span class="chip">Time ${clock(sec)}</span><span class="chip">Attempts ${attempts}</span></div><p>Highest score for this level is saved on this device. Existing ORBRINTH Level 1–10 records remain unchanged.</p><div class="actions duo"><button class="secondary" id="toLevels">All levels</button><button class="primary" id="toNext">${next?'Next Level '+next:'Replay Finale'}</button></div>`);$('toLevels').onclick=home;$('toNext').onclick=()=>brief(next||25);
+}
+function step(dt){if(ui!=='playing'||!maze)return;invuln=Math.max(0,invuln-dt);warpCD=Math.max(0,warpCD-dt);fallGrace=Math.max(0,fallGrace-dt);
+ const [sx,sy]=tilt();if(rearm){ball.vx=ball.vy=0;rearmTime=Math.hypot(sx,sy)<.16?rearmTime+dt:0;if(rearmTime>.32)rearm=false;return}
+ sec+=dt;const factor=1;ball.vx+=sx*22*factor*dt;ball.vy+=sy*22*factor*dt;const friction=Math.pow(.912,dt*60);ball.vx*=friction;ball.vy*=friction;const speed=Math.hypot(ball.vx,ball.vy);if(speed>5.3){ball.vx*=5.3/speed;ball.vy*=5.3/speed}
+ const chunks=Math.max(1,Math.ceil(Math.max(Math.abs(ball.vx),Math.abs(ball.vy))*dt/.095));for(let j=0;j<chunks;j++){moveAxis('x',ball.vx*dt/chunks);moveAxis('y',ball.vy*dt/chunks);if(ui!=='playing')break;checkHazards()}
+ updateFog();enemyAI(dt);renderHUD();if(lastEvent&&performance.now()-hitAt>0)$('hint').textContent=lastEvent;
+}
+function resize(){const rect=field.getBoundingClientRect();width=Math.max(10,rect.width);height=Math.max(10,rect.height);dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';scale=Z(width/(width>height?17:10.5),19,43)/SIZE}
+function visibleHere(id){return !stage.fog||visible[id]||seen[id]}
+function draw(t){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=saved.theme==='day'?'#e7f0fe':'#070f21';ctx.fillRect(0,0,width,height);if(!maze)return;
+ const {cols,rows,walls}=maze,worldW=cols*SIZE,worldH=rows*SIZE,s=SIZE*scale,vw=width/s,vh=height/s;
+ const camX=Z(ball.x-vw/2,0,Math.max(0,cols-vw)),camY=Z(ball.y-vh/2,0,Math.max(0,rows-vh));
+ ctx.save();ctx.translate(-camX*s,-camY*s);ctx.scale(s,s);
+ ctx.fillStyle=saved.theme==='day'?'#f0f7ff':'#101d38';ctx.fillRect(0,0,cols,rows);
+ const fromX=Math.max(0,Math.floor(camX)-1),toX=Math.min(cols,Math.ceil(camX+vw)+1),fromY=Math.max(0,Math.floor(camY)-1),toY=Math.min(rows,Math.ceil(camY+vh)+1);
+ // Floor cells and hazards (off-path pits never block the verified route)
+ for(let y=fromY;y<toY;y++)for(let x=fromX;x<toX;x++){
+  const id=cell(x,y,cols);ctx.fillStyle=(x+y)%2?(saved.theme==='day'?'#e7f1ff':'#111f3b'):(saved.theme==='day'?'#eff6ff':'#152443');ctx.fillRect(x,y,1.001,1.001);
+  if(maze.pits.has(id)){ctx.fillStyle='#02091b';ctx.beginPath();ctx.arc(x+.5,y+.5,.38,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#f484a0';ctx.lineWidth=.05;ctx.beginPath();ctx.arc(x+.5,y+.5,.37,0,Math.PI*2);ctx.stroke()}
+ }
+ // Warning strips indicate where a marble can roll off an unguarded outer edge.
+ for(const gap of maze.edgeGaps){if(!visibleHere(gap.id))continue;
+   const x=gap.id%cols,y=Math.floor(gap.id/cols);ctx.save();ctx.strokeStyle='#ff799a';ctx.lineWidth=.09;ctx.setLineDash([.12,.12]);
+   ctx.beginPath();if(gap.bit===N){ctx.moveTo(x,y);ctx.lineTo(x+1,y)}
+   else if(gap.bit===S){ctx.moveTo(x,y+1);ctx.lineTo(x+1,y+1)}
+   else if(gap.bit===E){ctx.moveTo(x+1,y);ctx.lineTo(x+1,y+1)}
+   else{ctx.moveTo(x,y);ctx.lineTo(x,y+1)}ctx.stroke();ctx.restore();
+ }
+ ctx.beginPath();ctx.lineWidth=.095;ctx.lineCap='round';ctx.strokeStyle=saved.theme==='day'?'#4167a3':'#5e9de9';
+ for(let y=fromY;y<toY;y++)for(let x=fromX;x<toX;x++){const w=walls[cell(x,y,cols)];if(w&N){ctx.moveTo(x,y);ctx.lineTo(x+1,y)}if(w&W){ctx.moveTo(x,y);ctx.lineTo(x,y+1)}if(x===cols-1&&(w&E)){ctx.moveTo(x+1,y);ctx.lineTo(x+1,y+1)}if(y===rows-1&&(w&S)){ctx.moveTo(x,y+1);ctx.lineTo(x+1,y+1)}}ctx.stroke();
+ for(const gate of maze.gates)for(const id of [gate.a,gate.b]){const x=id%cols+.5,y=Math.floor(id/cols)+.5;if(!visibleHere(id))continue;const phase=t*.002;ctx.save();ctx.strokeStyle=gate.color;ctx.lineWidth=.085;ctx.shadowColor=gate.color;ctx.shadowBlur=.3;ctx.beginPath();ctx.arc(x,y,.33,phase,phase+Math.PI*1.5);ctx.stroke();ctx.beginPath();ctx.arc(x,y,.19,-phase,-phase+Math.PI*1.4);ctx.stroke();ctx.restore()}
+ const gx=cols-.5,gy=.5,goalId=maze.goal;if(visibleHere(goalId)){ctx.save();ctx.fillStyle='#ff62c6';ctx.shadowColor='#ff62c6';ctx.shadowBlur=.3;ctx.beginPath();ctx.arc(gx,gy,.19,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ff81d3';ctx.lineWidth=.06;ctx.beginPath();ctx.arc(gx,gy,.34,0,Math.PI*2);ctx.stroke();ctx.restore()}
+ if(stage.fog)for(let y=fromY;y<toY;y++)for(let x=fromX;x<toX;x++){const id=cell(x,y,cols);if(!visible[id]){ctx.fillStyle=seen[id]?'rgba(4,10,30,.66)':'rgba(4,9,24,.98)';ctx.fillRect(x-.002,y-.002,1.004,1.004)}}
+ for(const e of maze.enemies){const id=e.cell;if(!visibleHere(id))continue;ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.heading);ctx.fillStyle=e.stunned>0?'#727e99':'#ff9b55';ctx.shadowColor='#ff6542';ctx.shadowBlur=.2;ctx.beginPath();ctx.moveTo(.18,0);for(let i=0;i<=24;i++){const a=-2.5+(5*i/24);ctx.lineTo(Math.cos(a)*.34,Math.sin(a)*.34)}ctx.closePath();ctx.fill();ctx.fillStyle='#172747';ctx.beginPath();ctx.arc(.01,-.12,.06,0,Math.PI*2);ctx.fill();ctx.restore()}
+ const glow=ctx.createRadialGradient(ball.x-.07,ball.y-.12,.02,ball.x,ball.y,.40);glow.addColorStop(0,'#fff');glow.addColorStop(.15,'#9ef3ff');glow.addColorStop(.52,'#39a7e8');glow.addColorStop(1,'#1160aa');ctx.save();ctx.globalAlpha=invuln>0&&Math.floor(t/120)%2? .38:1;ctx.fillStyle=glow;ctx.shadowColor='#30c4fa';ctx.shadowBlur=.25;ctx.beginPath();ctx.arc(ball.x,ball.y,BALL/SIZE,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#f0ffff';ctx.lineWidth=.03;ctx.stroke();ctx.restore();
+ // Start point
+ const start=cell(0,rows-1,cols);if(!stage.fog||seen[start]){ctx.strokeStyle='#5fe7ff';ctx.lineWidth=.04;ctx.beginPath();ctx.arc(.5,rows-.5,.34,0,Math.PI*2);ctx.stroke()}
+ ctx.restore();
+}
+function tick(t){const dt=Math.min(.038,Math.max(0,(t-tPrev)/1000||0));tPrev=t;if(ui==='playing')step(dt);draw(t);$('hint').textContent=(sensor&&performance.now()-sensorAt<2400?`TILT LIVE · ${Math.round(tilt()[0]*100)}% / ${Math.round(tilt()[1]*100)}%`:'SENSOR WAITING')+(rearm?' · RETURN TO NEUTRAL':'');requestAnimationFrame(tick)}
+$('cal').onclick=()=>{calibrationReset();lastEvent='Tilt calibrated'};$('pause').onclick=pause;$('home').onclick=home;document.addEventListener('visibilitychange',()=>{if(document.hidden&&ui==='playing')pause()});window.addEventListener('blur',()=>{if(ui==='playing')pause()});window.addEventListener('resize',resize);window.addEventListener('orientationchange',calibrationReset);
+document.body.classList.toggle('day',saved.theme==='day');resize();home();requestAnimationFrame(tick);
+})();
+</script></body></html>
