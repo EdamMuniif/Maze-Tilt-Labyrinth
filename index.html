@@ -1506,7 +1506,11 @@
       }
       ballQuat=live?keepQuat:o.quat;
       ballSkin(ctx,x,y,RAD,choice,{roll:true});
-      if(live&&waiting>1){ctx.strokeStyle=rgba(o.def.css,.85);ctx.lineWidth=1.8/Math.max(.6,Math.min(1.5,zoom));ctx.beginPath();ctx.arc(x,y,RAD+4.5,0,Math.PI*2);ctx.stroke()}
+      // Eye skins have fixed iris colors; retain a colored identification ring for each orb in Level 10.
+      if((live&&waiting>1)||EYE_SKINS.some(e=>e.id===choice.style)){
+        ctx.strokeStyle=rgba(o.def.css,.85);ctx.lineWidth=1.8/Math.max(.6,Math.min(1.5,zoom));
+        ctx.beginPath();ctx.arc(x,y,RAD+4.5,0,Math.PI*2);ctx.stroke();
+      }
     }
     ballQuat=keepQuat;
   }
