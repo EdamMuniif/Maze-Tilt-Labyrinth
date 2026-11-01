@@ -453,6 +453,9 @@
     .bottom-bar .toast.show{transform:translate(-50%,0)}
     html[data-look="new"] .bottom-bar{min-height:54px}
     html[data-look="new"] .status{flex:1 1 0;min-width:0}
+    /* Chapter II launcher is home-only; preserve existing game engines and saved records. */
+    #chapter2Open{display:none;text-decoration:none;align-items:center;justify-content:space-between}
+    .home-intro #chapter2Open{display:flex}
   </style>
 </head>
 <body>
@@ -532,6 +535,7 @@
     <button class="cta secondary" id="chooseLevel">Choose mazes <span class="arrow" aria-hidden="true">→</span></button>
     <button class="cta secondary hidden" id="dialogHome" type="button">⌂ Home <span class="arrow" aria-hidden="true">↖</span></button>
     <button class="cta secondary" id="preGameStyle">Customize maze, ball &amp; speed <span class="arrow" aria-hidden="true">✦</span></button>
+    <a class="cta secondary" id="chapter2Open" href="./levels11_25.html">Levels 11–25 · The Unknown Chapters <span class="arrow" aria-hidden="true">↗</span></a>
     <button class="cta secondary board-open hidden" id="boardOpen" type="button">Leaderboard <span class="arrow" aria-hidden="true">★</span></button>
     <p class="fine" id="dialogFine">Requires a motion-sensor-equipped phone and HTTPS (Chrome or Safari). Hold the phone comfortably, then tap Enable tilt. Use CAL to set the neutral angle. Touch is only for menus.</p>
     <button class="cta link" id="dataOpen" type="button">Back up or restore my data</button>
