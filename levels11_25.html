@@ -16,6 +16,10 @@ footer{flex:none;min-height:46px;display:flex;align-items:center;justify-content
 .panel{width:min(96vw,610px);max-height:min(94dvh,850px);overflow:auto;background:#14203a;border:1px solid #405172;border-radius:25px;padding:clamp(18px,4vw,30px);box-shadow:0 22px 80px #0007}.eyebrow{color:#ab89fd;font-size:11px;letter-spacing:.18em;font-weight:800;text-transform:uppercase}.logo{font-size:clamp(32px,6vw,56px);font-weight:950;line-height:1.07;letter-spacing:-.055em;margin:15px 0 3px;background:linear-gradient(105deg,#21baff,#796bff 55%,#f343a9);background-clip:text;color:transparent}.tagline{letter-spacing:.23em;color:#c4d3f1;font-size:12px;margin:6px 0 19px}.panel h2{font-size:clamp(23px,4vw,33px);line-height:1.17;margin:10px 0}.panel p{line-height:1.55;color:#bfcae1;margin:11px 0 16px}.panel .summary{font-size:13px;color:#dbe5fc}.chips{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 18px}.chip{border:1px solid #485f8b;background:#203454;color:#dceaff;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700}
 .primary{background:linear-gradient(110deg,#176edc,#7456c9,#d82d94);border:0;color:white;border-radius:14px;padding:15px 18px;font-weight:850;font-size:15px;min-height:48px;box-shadow:0 12px 35px #172e6b60}.secondary{background:#243759;color:#e5efff;border:1px solid #445a80;border-radius:14px;padding:14px;font-weight:750;min-height:47px}.actions{display:grid;gap:8px;margin-top:17px}.actions.duo{grid-template-columns:1fr 1fr}.actions.sticky{position:sticky;bottom:-8px;background:#14203a;padding:8px 0 4px;z-index:4}.day .actions.sticky{background:#f7faff}
 .levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:16px 0}.level{background:#233657;color:#ebf4ff;border:1px solid #3c527c;border-radius:12px;padding:8px 4px;min-height:61px;font-size:17px;font-weight:900}.level small{display:block;font-size:8px;font-weight:650;margin-top:5px;color:#b5c8e3}.level.done{border-color:#3ccbb8;color:#68f4ce}.level.selected{border:2px solid #b183fb}
+/* Locked levels are visible but cannot launch, including deep-link requests. */
+.level.locked,.level:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.55)}
+.level.locked small{color:#a4aec5}
+.primary:disabled{opacity:.58;cursor:not-allowed;box-shadow:none}
 #message{font-weight:800;color:#fff;margin-top:9px}.note{font-size:11px;color:#91a2c9;margin-top:13px}.progress{margin:12px 0 4px;font-variant-numeric:tabular-nums;font-weight:800;color:#58daff}
 .player-row{display:flex;gap:8px;align-items:center;margin:8px 0 13px}.player-row label{font-size:11px;font-weight:800;color:#a3b7de;white-space:nowrap}.player-row input{min-width:0;flex:1;border:1px solid #456187;border-radius:10px;background:#091b35;color:#f1f6ff;padding:10px 11px;font:inherit;font-size:14px}.player-row button{border:1px solid #4b6389;border-radius:10px;background:#263e64;color:#e8f6ff;font:inherit;font-size:12px;font-weight:800;min-height:39px;padding:8px 11px}.day .player-row input{background:#fff;color:#1b385a;border-color:#bfd1e6}.day .player-row button{background:#e7eefb;color:#294b78;border-color:#bfd1e6}
 .day{background:#f9fbff;color:#152341}.day #shell{background:#f0f4ff}.day header,.day footer{background:#eaf0ff;border-color:#c9d7eb;color:#3b5179}.day .stat span,.day .brand small{color:#516c92}.day .stat strong{color:#243960}.day #field{background:#e5effc}.day button.icon-btn{background:#fff;color:#274877;border-color:#b7c9e4}.day .panel{background:#f7faff;color:#172844;border-color:#d6e0f0}.day .panel p,.day .panel .summary{color:#405673}.day .tagline{color:#4d658e}.day .level{background:#e8effc;color:#213d68;border-color:#bdd0eb}.day .level small{color:#5b7397}.day .chip{background:#edf4ff;color:#28436b;border-color:#c2d4ed}.day .secondary{background:#e7eefc;color:#243d62;border-color:#bdd0eb}.day .note{color:#516888}.day #modal{background:#0b1a4190}
@@ -51,6 +55,9 @@ const STAGES=[
 ];
 const stages=STAGES.map(([num,name,cols,rows,portals,fog,pits,hunters,damage,vision,desc])=>({num,name,cols,rows,portals,fog:!!fog,pits,hunters,damage:!!damage,vision,desc}));
 const STORE='orbrinth-chapter2-v2',empty=()=>({best:{},times:{},completed:{},theme:'night'});
+// Sequential Chapter II progression; completed scores and achievements are never deleted.
+const COMPLETED_CLASSIC_10=9;
+
 const nameSafe=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const cleanName=x=>String(x||'').trim().replace(/[^a-zA-Z0-9 _-]/g,'').slice(0,18)||'Player';
 const playerKey=x=>cleanName(x).toLowerCase();
@@ -59,10 +66,36 @@ if(!archive||typeof archive!=='object'||!archive.players)archive={players:{},act
 let originalPlayer=null;
 try{const profiles=JSON.parse(localStorage.getItem('tilt-labyrinth-v6-profiles')||'{}');
  const active=localStorage.getItem('tilt-labyrinth-v6-active');if(active&&profiles[active])originalPlayer=cleanName(profiles[active].name)}catch(_){/* Original records are read-only. */}
-let activeName=cleanName(archive.active||originalPlayer||'Player');
+const requestedPlayer=new URLSearchParams(location.search).get('player');
+let activeName=cleanName(requestedPlayer||archive.active||originalPlayer||'Player');
 const recordFor=name=>{const k=playerKey(name);if(!archive.players[k])archive.players[k]=empty();return archive.players[k]};
 let saved=recordFor(activeName);
 const save=()=>{archive.active=activeName;try{localStorage.setItem(STORE,JSON.stringify(archive))}catch(_){}};
+// Original Classic Level 10 is verified from the active nickname's saved completion record,
+// NOT from merely having Level 10 unlocked in the level picker.
+function clearedClassicTen(name){
+ try{
+  const profiles=JSON.parse(localStorage.getItem('tilt-labyrinth-v6-profiles')||'{}');
+  const p=Object.values(profiles).find(v=>v&&playerKey(v.name)===playerKey(name));
+  if(p&&(Number(p.classicBest?.[COMPLETED_CLASSIC_10])>0||Number(p.scores?.['classic:9'])>0))return true;
+  // Legacy anonymous save is usable only when this browser has no named profiles.
+  if(Object.keys(profiles).length)return false;
+  const legacy=JSON.parse(localStorage.getItem('tilt-labyrinth-v4-bests')||'{}');
+  return Number(legacy?.[COMPLETED_CLASSIC_10])>0;
+ }catch(_){return false}
+}
+function nextChapterStage(){
+ let n=11;
+ while(n<=25&&saved.completed?.[n]===true)n++;
+ return n;
+}
+function stageUnlocked(n){
+ if(!Number.isInteger(n)||n<11||n>25)return false;
+ // Existing cleared achievements remain playable, even if earned in the previous free-play build.
+ if(saved.completed?.[n]===true)return true;
+ return clearedClassicTen(activeName)&&n===nextChapterStage();
+}
+
 let ui='home',stage=null,maze=null,ball={x:0,y:0,vx:0,vy:0},sec=0,health=5,maxHealth=5,attempts=0,wallHits=0,pickups=0,warps=0,invuln=0,warpCD=0,fallGrace=0,rearm=false,rearmTime=0,seen=null,visible=null,senseCell=-1,positionCam={x:0,y:0},sensor=null,baseline=null,sensorAt=0,permissionRequested=false,tPrev=0,hitAt=-100,enemyAt=0,pausedFrom='playing',width=0,height=0,dpr=1,scale=1,currentLevel=11,lastEvent='';
 const pad=n=>String(n).padStart(2,'0'),clock=t=>`${pad(Math.floor(t/60))}:${pad(Math.floor(t%60))}`;
 const levelKey=n=>String(n),fmt=n=>Math.round(n).toLocaleString('en-US');
@@ -112,11 +145,20 @@ function beginStage(n){currentLevel=n;stage=stages.find(s=>s.num===n);maze=build
 function hazards(p){const a=[];if(p.portals)a.push(`${p.portals} wormhole ${p.portals===1?'pair':'pairs'}`);if(p.fog)a.push(`Fog · ${p.vision}-step sight`);if(p.pits)a.push(`${p.pits} falling tiles + open edges`);if(p.hunters)a.push(`${p.hunters} roaming ${p.hunters===1?'hunter':'hunters'}`);if(p.damage)a.push('Wall damage + haptics');return a.length?a:['Pure maze challenge']}
 function setModal(eyebrow,title,subtitle,html){$('eyebrow').textContent=eyebrow;$('modalTitle').textContent=title;$('subtitle').textContent=subtitle;contents.innerHTML=html;overlay.hidden=false}
 function home(){ui='home';pauseMotion();const complete=Object.keys(saved.completed).filter(k=>saved.completed[k]).length;
- let list=stages.map(p=>`<button class="level ${saved.completed[p.num]?'done':''}" data-stage="${p.num}">${p.num}<small>${saved.completed[p.num]?'CLEARED':p.fog?'FOG':p.hunters?'HUNTER':p.portals?'WARP':'MAZE'}</small></button>`).join('');
- setModal('LEVELS 11–25 · CHAPTER II','ORBRINTH','TILT INTO THE UNKNOWN',`<p class="summary">15 challenging gyro-only levels with safe wormholes, fog, falling floor tiles and open edges, roaming hunters and wall-impact damage.</p><div class="player-row"><label for="playerName">PLAYER</label><input id="playerName" maxlength="18" value="${activeName}" aria-label="Your player nickname"><button id="switchPlayer">Switch</button></div><div class="progress">${complete}/15 completed · ${Object.keys(saved.best).length} best scores recorded</div><div class="levels">${list}</div><div class="actions duo"><button class="secondary" id="themeToggle">${saved.theme==='night'?'☀ Day Mode':'☾ Night Mode'}</button><button class="primary" id="startNewest">Start Level 11</button></div><div class="note">Play any level to test the expansion. Scores are local to this browser; no global leaderboard is claimed. Main ORBRINTH records are not modified. Switch nicknames to keep separate records on one device.</div><details style="margin-top:12px"><summary style="font-size:12px;color:#83dfff;font-weight:800;cursor:pointer">Leaderboard on this device</summary><div id="localRank" style="margin-top:7px;font-size:12px;line-height:1.7">${Object.entries(archive.players).map(([name,data])=>({name,points:Object.values(data.best||{}).reduce((a,b)=>a+Number(b||0),0)})).sort((a,b)=>b.points-a.points).slice(0,10).map((x,i)=>`<div style=\"border-bottom:1px solid #354568;padding:3px 0\">${i+1}. ${nameSafe(x.name)} · ${fmt(x.points)} pts</div>`).join('')}</div></details><div style="margin-top:14px"><a href="./" style="color:#86c9ff;font-weight:750;font-size:12px">← Return to ORBRINTH Levels 1–10 (when hosted together)</a></div>`);
- contents.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>brief(Number(b.dataset.stage))));$('startNewest').onclick=()=>brief(11);$('switchPlayer').onclick=()=>{activeName=cleanName($('playerName').value);saved=recordFor(activeName);save();home()};$('themeToggle').onclick=()=>{saved.theme=saved.theme==='night'?'day':'night';save();document.body.classList.toggle('day',saved.theme==='day');home()};
+ const next=nextChapterStage(),allowed=clearedClassicTen(activeName);
+ const nextPlayable=stages.find(p=>stageUnlocked(p.num)&&!saved.completed?.[p.num])?.num;
+ const resumeLevel=nextPlayable|| (saved.completed?.[25]?25:11);
+ const resumeReady=stageUnlocked(resumeLevel);
+ const unlockNote=allowed
+   ?(next<25?`Clear Level ${next} to unlock Level ${next+1}.`:next===25?'Complete Level 25 to finish Chapter II.':'All 15 Chapter II levels cleared.')
+   :'Complete Classic Level 10 in the main game to begin Chapter II. Previous Chapter II clear records are preserved.';
+ let list=stages.map(p=>{const clear=saved.completed?.[p.num]===true,open=stageUnlocked(p.num);
+  return `<button type="button" class="level ${clear?'done':''} ${open?'':'locked'}" data-stage="${p.num}" ${open?'':'disabled aria-disabled="true"'} aria-label="Level ${p.num} ${clear?'cleared':open?'unlocked':'locked'}">${p.num}<small>${clear?'CLEARED':open?'PLAY':'LOCKED'}</small></button>`;
+ }).join('');
+ setModal('LEVELS 11–25 · CHAPTER II','ORBRINTH','TILT INTO THE UNKNOWN',`<p class="summary">15 challenging gyro-only levels with safe wormholes, fog, falling floor tiles and open edges, roaming hunters and wall-impact damage.</p><div class="player-row"><label for="playerName">PLAYER</label><input id="playerName" maxlength="18" value="${activeName}" aria-label="Your player nickname"><button id="switchPlayer">Switch</button></div><div class="progress">${complete}/15 completed · ${Object.keys(saved.best).length} best scores recorded</div><div class="note">${unlockNote}</div><div class="levels">${list}</div><div class="actions duo"><button class="secondary" id="themeToggle">${saved.theme==='night'?'☀ Day Mode':'☾ Night Mode'}</button><button class="primary" id="startNewest" ${resumeReady?'':'disabled'}>${resumeReady?'Continue · Level '+resumeLevel:'Clear Classic 10 to Begin'}</button></div><div class="note">Complete one level to unlock the next. Scores remain local to this browser; no global leaderboard is claimed. Main ORBRINTH records are not modified. Switch nicknames to keep separate records on one device.</div><details style="margin-top:12px"><summary style="font-size:12px;color:#83dfff;font-weight:800;cursor:pointer">Leaderboard on this device</summary><div id="localRank" style="margin-top:7px;font-size:12px;line-height:1.7">${Object.entries(archive.players).map(([name,data])=>({name,points:Object.values(data.best||{}).reduce((a,b)=>a+Number(b||0),0)})).sort((a,b)=>b.points-a.points).slice(0,10).map((x,i)=>`<div style=\"border-bottom:1px solid #354568;padding:3px 0\">${i+1}. ${nameSafe(x.name)} · ${fmt(x.points)} pts</div>`).join('')}</div></details><div style="margin-top:14px"><a href="./" style="color:#86c9ff;font-weight:750;font-size:12px">← Return to ORBRINTH Levels 1–10 (when hosted together)</a></div>`);
+ contents.querySelectorAll('[data-stage]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>brief(Number(b.dataset.stage))));$('startNewest').onclick=()=>{if(resumeReady)brief(resumeLevel)};$('switchPlayer').onclick=()=>{activeName=cleanName($('playerName').value);saved=recordFor(activeName);save();home()};$('themeToggle').onclick=()=>{saved.theme=saved.theme==='night'?'day':'night';save();document.body.classList.toggle('day',saved.theme==='day');home()};
 }
-function brief(n){beginStage(n);ui='brief';const p=stage;const already=saved.best[n]?`Personal best: ${fmt(saved.best[n])} points · Best time ${clock(saved.times[n]||0)}`:'No completion recorded yet';
+function brief(n){if(!stageUnlocked(n)){home();return}beginStage(n);ui='brief';const p=stage;const already=saved.best[n]?`Personal best: ${fmt(saved.best[n])} points · Best time ${clock(saved.times[n]||0)}`:'No completion recorded yet';
  setModal('BEFORE LEVEL '+n,`${pad(n)} · ${p.name}`,'TILT INTO THE UNKNOWN',`<p class="summary">${p.desc}</p><div class="chips">${hazards(p).map(x=>`<span class="chip">${x}</span>`).join('')}</div><p><strong>Objective:</strong> roll the marble from the blue start to the pink goal. Tilt your phone to steer. No touch/drag movement. Wormholes move you to linked locations. Dark holes and marked open boundary edges cause a fall. Avoid the original <strong>Maw</strong> hunter. Wall impacts cost health on damage levels; supported Android devices vibrate briefly.</p><p>Health: <strong>${maxHealth} points</strong>. If health reaches zero, the ball returns to the start and your attempt count increases. Fog slowly reveals connected corridors. The timer continues through retries.</p><div class="note">${already}</div><div class="actions duo sticky"><button class="secondary" id="backLevels">All levels</button><button class="primary" id="startTilt">Enable tilt & play</button></div>`);
  $('backLevels').onclick=home;$('startTilt').onclick=enableTilt;
 }
@@ -191,7 +233,7 @@ function enemyAI(dt){if(!maze.enemies.length)return;enemyAt+=dt;for(const e of m
 }
 function updateFog(force=false){if(!stage?.fog)return;const pos=cell(Z(Math.floor(ball.x),0,maze.cols-1),Z(Math.floor(ball.y),0,maze.rows-1),maze.cols);if(!force&&pos===senseCell)return;senseCell=pos;visible.fill(0);const q=[pos],dist=new Int16Array(maze.cols*maze.rows).fill(-1);dist[pos]=0;for(let i=0;i<q.length;i++){const a=q[i];visible[a]=1;seen[a]=1;if(dist[a]>=stage.vision)continue;for(const b of neighbors(maze,a)){if(dist[b]>=0)continue;dist[b]=dist[a]+1;q.push(b)}}}
 function finish(){if(ui!=='playing')return;ui='won';vibrate([80,50,110]);const base=1100+stage.num*180,points=Math.max(250,Math.round(base+maze.path.length*5+4000/(1+sec/75)-attempts*275-wallHits*7));const key=levelKey(stage.num);if(points>Number(saved.best[key]||0))saved.best[key]=points;if(!saved.times[key]||sec<saved.times[key])saved.times[key]=sec;saved.completed[key]=true;save();
- const next=stage.num<25?stage.num+1:null;setModal('LEVEL CLEARED',`${stage.num} · COMPLETE`,'TILT INTO THE UNKNOWN',`<p class="summary">The unknown yields to you. All objectives completed.</p><div class="chips"><span class="chip">Score ${fmt(points)}</span><span class="chip">Best ${fmt(saved.best[key])}</span><span class="chip">Time ${clock(sec)}</span><span class="chip">Attempts ${attempts}</span></div><p>Highest score for this level is saved on this device. Existing ORBRINTH Level 1–10 records remain unchanged.</p><div class="actions duo"><button class="secondary" id="toLevels">All levels</button><button class="primary" id="toNext">${next?'Next Level '+next:'Replay Finale'}</button></div>`);$('toLevels').onclick=home;$('toNext').onclick=()=>brief(next||25);
+ const next=stage.num<25&&stageUnlocked(stage.num+1)?stage.num+1:null;setModal('LEVEL CLEARED',`${stage.num} · COMPLETE`,'TILT INTO THE UNKNOWN',`<p class="summary">The unknown yields to you. All objectives completed.</p><div class="chips"><span class="chip">Score ${fmt(points)}</span><span class="chip">Best ${fmt(saved.best[key])}</span><span class="chip">Time ${clock(sec)}</span><span class="chip">Attempts ${attempts}</span></div><p>Highest score for this level is saved on this device. Existing ORBRINTH Level 1–10 records remain unchanged.</p><div class="actions duo"><button class="secondary" id="toLevels">All levels</button><button class="primary" id="toNext">${next?'Next Level '+next:'All Levels'}</button></div>`);$('toLevels').onclick=home;$('toNext').onclick=()=>next?brief(next):home();
 }
 function step(dt){if(ui!=='playing'||!maze)return;invuln=Math.max(0,invuln-dt);warpCD=Math.max(0,warpCD-dt);fallGrace=Math.max(0,fallGrace-dt);
  const [sx,sy]=tilt();if(rearm){ball.vx=ball.vy=0;rearmTime=Math.hypot(sx,sy)<.16?rearmTime+dt:0;if(rearmTime>.32)rearm=false;return}
@@ -235,7 +277,7 @@ function tick(t){const dt=Math.min(.038,Math.max(0,(t-tPrev)/1000||0));tPrev=t;i
 $('cal').onclick=()=>{calibrationReset();lastEvent='Tilt calibrated'};$('pause').onclick=pause;$('home').onclick=home;document.addEventListener('visibilitychange',()=>{if(document.hidden&&ui==='playing')pause()});window.addEventListener('blur',()=>{if(ui==='playing')pause()});window.addEventListener('resize',resize);window.addEventListener('orientationchange',calibrationReset);
 document.body.classList.toggle('day',saved.theme==='day');
 resize();
-// A level chosen from the main ORBRINTH selector opens its briefing first.
+// Allow the main ORBRINTH level selector to open a specific Chapter II briefing.
 const requestedStage=Number(new URLSearchParams(location.search).get('level'));
 if(Number.isInteger(requestedStage)&&requestedStage>=11&&requestedStage<=25)brief(requestedStage);
 else home();
