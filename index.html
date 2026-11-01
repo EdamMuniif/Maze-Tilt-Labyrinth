@@ -73,6 +73,8 @@
     body[data-ui-mode="night"] .chapter-heading{color:#dfb2fb;border-color:#405077}
     body[data-ui-mode="night"] .level-tile.chapter-level{background:#2c345d;border-color:#7569a7;color:#eef1ff}
     body[data-ui-mode="night"] .level-tile.chapter-level small{color:#c5b7ec}
+    .level-tile.chapter-level.chapter-cleared{border-color:#3bb88e;background:#e6f8f2}
+    body[data-ui-mode="night"] .level-tile.chapter-level.chapter-cleared{background:#203f48;border-color:#3bb88e}
     .level-picker.hidden{display:none}
     .fine.error{color:#a13063;font-weight:650}
     @media(max-width:670px){.level-stat{min-width:76px}.topbar .tool{min-width:38px}}
@@ -1823,19 +1825,39 @@
       b.addEventListener('click',async()=>{loadLevel(i,'classic');await beginTilt()});picker.appendChild(b);
     });
     if(tab==='classic'){
-      // Chapter II is playable as a separate HTML5 scene; show all stages in the
-      // same selector instead of an obsolete disabled "Coming soon" tile.
+      // Keep Classic 1–10 and their saved profiles unchanged. Chapter II reads
+      // its separate completion records to expose only the next eligible stage.
+      let chapterCompleted={};
+      try{
+        const archive=JSON.parse(localStorage.getItem('orbrinth-chapter2-v2')||'{}');
+        const key=String(playerProfile?.name||'').trim().replace(/[^a-zA-Z0-9 _-]/g,'').slice(0,18).toLowerCase();
+        chapterCompleted=archive?.players?.[key]?.completed||{};
+      }catch(_){/* No Chapter II records yet. */}
+      const classicTenCleared=Number(playerProfile?.classicBest?.[9])>0||
+        Number(playerProfile?.scores?.['classic:9'])>0;
+      let nextChapter=11;
+      while(nextChapter<=25&&chapterCompleted[nextChapter]===true)nextChapter++;
       const section=document.createElement('div');section.className='chapter-heading';
       section.textContent='CHAPTER II · LEVELS 11–25';picker.appendChild(section);
       const chapterLabels=['CROSSWIND','WORMHOLES','FOG','EDGEFALL','FOG + RIFTS',
         'HUNTER','WALL DAMAGE','VOID','4 PORTALS','ECLIPSE','GAUNTLET','NIGHT VISION',
         'WORMHOLES','ABYSS','FINAL'];
       for(let n=11;n<=25;n++){
-        const tile=document.createElement('button');tile.type='button';tile.className='level-tile chapter-level';
-        tile.setAttribute('aria-label','Open Level '+n+' briefing in Chapter II');
+        const cleared=chapterCompleted[n]===true;
+        const unlocked=cleared||(classicTenCleared&&n===nextChapter);
+        const tile=document.createElement('button');tile.type='button';
+        tile.className='level-tile chapter-level'+(cleared?' chapter-cleared':'');
+        tile.disabled=!unlocked;
+        tile.title=!unlocked?'Clear Level '+(n-1)+' to unlock':'Level '+n;
+        tile.setAttribute('aria-label','Level '+n+(cleared?' cleared':unlocked?' unlocked':' locked'));
         tile.textContent=String(n).padStart(2,'0');
-        const detail=document.createElement('small');detail.textContent=chapterLabels[n-11];tile.appendChild(detail);
-        tile.addEventListener('click',()=>{window.location.assign('./levels11_25.html?level='+n)});
+        const detail=document.createElement('small');
+        detail.textContent=cleared?'CLEARED':unlocked?chapterLabels[n-11]:'LOCKED';
+        tile.appendChild(detail);
+        tile.addEventListener('click',()=>{
+          if(unlocked)window.location.assign('./levels11_25.html?level='+n+
+            '&player='+encodeURIComponent(playerProfile.name));
+        });
         picker.appendChild(tile);
       }
     }
@@ -1861,7 +1883,7 @@
     phase='select';
     $('dialogTitle').innerHTML='CHOOSE <span class="gradient">MAZE.</span>';
     $('dialogEyebrow').textContent='CLASSIC & SPECIAL CHALLENGES';
-    $('dialogCopy').textContent='Classic Levels 1–10 unlock in sequence. Chapter II Levels 11–25 open their own playable challenge and briefing. Special Mazes remain available. Only phone tilt steers.';
+    $('dialogCopy').textContent='Complete Classic Level 10 to unlock Chapter II Level 11. Complete each Chapter II level to unlock the next. Special Mazes remain available. Only phone tilt steers.';
     $('dialogChips').classList.add('hidden');$('dialogHome').classList.remove('hidden');$('tiltStart').classList.add('hidden');
     $('chooseLevel').classList.add('hidden');$('preGameStyle').classList.add('hidden');pickerTabs.classList.remove('hidden');
     renderPicker(mode);
@@ -1894,6 +1916,10 @@
     $('playerName').value=playerProfile?.name||$('playerName').value;
     renderProfilePreview();overlay.classList.remove('hidden');updateControls();
   }
+  $('chapter2Open').addEventListener('click',()=>{
+    const player=String(playerProfile?.name||$('playerName').value||'').trim();
+    $('chapter2Open').href='./levels11_25.html'+(player?'?player='+encodeURIComponent(player):'');
+  });
   $('playerName').addEventListener('input',renderProfilePreview);
   $('playerName').addEventListener('keydown',event=>{if(event.key==='Enter'){$('playerName').blur();primaryStart();}});
   $('profileButton').addEventListener('click',showProfileDialog);
