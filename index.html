@@ -66,6 +66,13 @@
     .level-tile.current{border:2px solid #6d56b6;background:#eeebfb}
     .level-tile.soon{grid-column:1/-1;opacity:1;cursor:default;border-style:dashed;background:transparent;color:#8992a8}
     .level-tile.soon small{color:#6d56b6}
+    /* Main selector: playable Chapter II stages 11–25 */
+    .chapter-heading{grid-column:1/-1;font-size:11px;font-weight:850;letter-spacing:.09em;color:#9265b4;margin:10px 0 0;padding:8px 0 5px;border-top:1px solid #d5cde5}
+    .level-tile.chapter-level{background:linear-gradient(140deg,#eef5ff,#f7eeff);border-color:#b8acdb;color:#303e78}
+    .level-tile.chapter-level small{color:#6a6092;font-size:7px;letter-spacing:0}
+    body[data-ui-mode="night"] .chapter-heading{color:#dfb2fb;border-color:#405077}
+    body[data-ui-mode="night"] .level-tile.chapter-level{background:#2c345d;border-color:#7569a7;color:#eef1ff}
+    body[data-ui-mode="night"] .level-tile.chapter-level small{color:#c5b7ec}
     .level-picker.hidden{display:none}
     .fine.error{color:#a13063;font-weight:650}
     @media(max-width:670px){.level-stat{min-width:76px}.topbar .tool{min-width:38px}}
@@ -528,8 +535,8 @@
       <div class="record-line" id="playerRecord" role="status">Enter a name to create or continue a record.</div>
       <div class="local-standings" id="localStandings"></div>
     </div>
-    <div class="picker-tabs hidden" id="pickerTabs"><button class="picker-tab selected" id="classicTab">CLASSIC · 10</button><button class="picker-tab" id="specialTab">SPECIAL · 6</button></div>
-    <div class="level-picker hidden" id="levelPicker" aria-label="Unlocked classic levels"></div>
+    <div class="picker-tabs hidden" id="pickerTabs"><button class="picker-tab selected" id="classicTab">LEVELS · 25</button><button class="picker-tab" id="specialTab">SPECIAL · 6</button></div>
+    <div class="level-picker hidden" id="levelPicker" aria-label="Classic and Chapter II levels"></div>
     <div class="special-picker hidden" id="specialPicker" aria-label="Special-shaped mazes"></div>
     <button class="cta primary" id="tiltStart">Enable tilt & play <span class="arrow" aria-hidden="true">↗</span></button>
     <button class="cta secondary" id="chooseLevel">Choose mazes <span class="arrow" aria-hidden="true">→</span></button>
@@ -1816,8 +1823,21 @@
       b.addEventListener('click',async()=>{loadLevel(i,'classic');await beginTilt()});picker.appendChild(b);
     });
     if(tab==='classic'){
-      const soon=document.createElement('button');soon.className='level-tile soon';soon.disabled=true;soon.setAttribute('aria-label','Level 11 is coming soon');
-      soon.textContent='11';const info=document.createElement('small');info.textContent='NEW MAZE · COMING SOON';soon.appendChild(info);picker.appendChild(soon);
+      // Chapter II is playable as a separate HTML5 scene; show all stages in the
+      // same selector instead of an obsolete disabled "Coming soon" tile.
+      const section=document.createElement('div');section.className='chapter-heading';
+      section.textContent='CHAPTER II · LEVELS 11–25';picker.appendChild(section);
+      const chapterLabels=['CROSSWIND','WORMHOLES','FOG','EDGEFALL','FOG + RIFTS',
+        'HUNTER','WALL DAMAGE','VOID','4 PORTALS','ECLIPSE','GAUNTLET','NIGHT VISION',
+        'WORMHOLES','ABYSS','FINAL'];
+      for(let n=11;n<=25;n++){
+        const tile=document.createElement('button');tile.type='button';tile.className='level-tile chapter-level';
+        tile.setAttribute('aria-label','Open Level '+n+' briefing in Chapter II');
+        tile.textContent=String(n).padStart(2,'0');
+        const detail=document.createElement('small');detail.textContent=chapterLabels[n-11];tile.appendChild(detail);
+        tile.addEventListener('click',()=>{window.location.assign('./levels11_25.html?level='+n)});
+        picker.appendChild(tile);
+      }
     }
     if(tab!=='classic')SPECIALS.forEach((shape,i)=>{
       const b=document.createElement('button');b.className='special-tile'+(mode==='special'&&specialIndex===i?' current':'')+(shape.id==='threeD'?' challenge-tile':'');
@@ -1841,7 +1861,7 @@
     phase='select';
     $('dialogTitle').innerHTML='CHOOSE <span class="gradient">MAZE.</span>';
     $('dialogEyebrow').textContent='CLASSIC & SPECIAL CHALLENGES';
-    $('dialogCopy').textContent='Classic levels unlock in sequence. All five original special-shape mazes plus the 3D platform challenge are available immediately. Only phone tilt moves the ball.';
+    $('dialogCopy').textContent='Classic Levels 1–10 unlock in sequence. Chapter II Levels 11–25 open their own playable challenge and briefing. Special Mazes remain available. Only phone tilt steers.';
     $('dialogChips').classList.add('hidden');$('dialogHome').classList.remove('hidden');$('tiltStart').classList.add('hidden');
     $('chooseLevel').classList.add('hidden');$('preGameStyle').classList.add('hidden');pickerTabs.classList.remove('hidden');
     renderPicker(mode);
