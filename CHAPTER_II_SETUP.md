@@ -1,5 +1,7 @@
 # ORBRINTH — The Unknown Chapters (Levels 11–25)
 
+**Release status (2026-11-01):** `levels11_25.html` has been committed to the main branch and linked from the ORBRINTH Home screen in `index.html`. This remains a standalone Chapter II game with its own local scores; it is not a merged 25-level progression. The setup steps below describe the original test package; the ZIP screenshots and `patch_home_link.py` are not included as files in this GitHub repository. GitHub Pages deployment and physical-phone behavior are not independently verified.
+
 ## What is included
 - `levels11_25.html`: self-contained, gyro-only chapter with 15 fixed-seed labyrinths.
 - `level25_brief_landscape.png`, `level25_play_landscape.png`, `level25_brief_portrait.png`, `home_portrait.png`: actual Chromium screenshots.
@@ -66,4 +68,4 @@ Expansion scores use a new per-nickname key `orbrinth-chapter2-v2` and remain lo
 - Wall damage that depletes health uses the same safe recovery rather than retaining the prior collision coordinate.
 
 ## Release boundary
-This is a tested standalone Chapter II preview with a safe home-menu integration script. It is not yet a fully merged 25-level single-file build. Original scores, achievements and settings are not overwritten, and deployment of `index.html` or the chapter must be separately authorized.
+This is a tested standalone Chapter II preview with a safe home-menu integration script. It is not yet a fully merged 25-level single-file build. Original scores, achievements and settings are not intentionally overwritten; the Chapter II page and Home launcher have now been committed to GitHub.
